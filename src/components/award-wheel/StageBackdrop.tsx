@@ -25,6 +25,17 @@ export const StageBackdrop = ({ variant }: { variant: BackdropVariant }) => (
       alt=""
       draggable={false}
     />
+    <div className="stage-backdrop__beams">
+      <span className="stage-beam stage-beam--a" />
+      <span className="stage-beam stage-beam--b" />
+    </div>
+    <div className="stage-backdrop__bokeh">
+      <span className="bokeh-dot bokeh-dot--1" />
+      <span className="bokeh-dot bokeh-dot--2" />
+      <span className="bokeh-dot bokeh-dot--3" />
+      <span className="bokeh-dot bokeh-dot--4" />
+      <span className="bokeh-dot bokeh-dot--5" />
+    </div>
     <div className="stage-backdrop__halo" />
     <div className="stage-backdrop__scrim" />
     <div className="stage-backdrop__grain" />

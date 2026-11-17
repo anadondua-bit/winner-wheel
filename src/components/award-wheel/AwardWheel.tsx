@@ -57,7 +57,9 @@ export const AwardWheel = ({
     <div className="relative aspect-square w-full max-w-[min(74vh,42vw)] max-lg:max-w-[min(62vh,86vw)]">
       <div
         aria-hidden="true"
-        className="absolute -inset-[9%] rounded-full opacity-80 blur-2xl"
+        className={`absolute -inset-[9%] rounded-full opacity-80 blur-2xl wheel-ambient ${
+          phase === "result" ? "wheel-ambient--lit" : ""
+        }`}
         style={{
           background:
             "radial-gradient(circle at 50% 46%, hsl(var(--brand-mint) / 0.26) 0%, hsl(var(--brand-cyan) / 0.12) 46%, transparent 70%)",
@@ -84,6 +86,8 @@ export const AwardWheel = ({
       <div className="pointer-events-none absolute inset-0">
         <WheelChassis landedKey={landedKey} />
       </div>
+
+      {!spinning ? <div aria-hidden="true" className="wheel-shine" /> : null}
     </div>
   );
 };

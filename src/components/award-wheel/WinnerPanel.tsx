@@ -1,4 +1,5 @@
 import type { DrawPhase, Winner } from "@/lib/wheel-types";
+import { RevealFlourish } from "./RevealFlourish";
 
 type WinnerPanelProps = {
   phase: DrawPhase;
@@ -90,7 +91,7 @@ export const WinnerPanel = ({
             <div className="mb-[1.4vh] h-[2px] w-[4.4vw] min-w-[46px] bg-gradient-to-r from-brand-mint to-transparent" />
             <span className="eyebrow text-brand-mint/90">Winner · draw {pad(winner.draw)}</span>
             <h1
-              className={`display-name mt-[1.1vh] break-words ${
+              className={`display-name name-stamp mt-[1.1vh] break-words ${
                 winner.name.length > 22 ? "winner-name--long" : "winner-name"
               }`}
             >
@@ -161,6 +162,8 @@ export const WinnerPanel = ({
           {winnersCount} / {totalDraws} REVEALED
         </span>
       </footer>
+
+      {isResult && winner ? <RevealFlourish key={winner.draw} /> : null}
     </section>
   );
 };
