@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { deriveWheelView } from "@/lib/wheel-derive";
+import { SPIN_DURATION_MS } from "@/lib/wheel-geometry";
 import { STORAGE_KEY, createInitialState } from "@/lib/wheel-roster";
 import type {
   AccentName,
@@ -195,6 +197,14 @@ export const useAwardWheel = (): AwardWheelApi => {
     setState(next);
   }, []);
 
+  // Owns the spin's timing itself so the result lands even when nothing
+  // renders the wheel (the command center has no wheel graphic at all).
+  useEffect(() => {
+    if (state.phase !== "spinning") return;
+    const timer = window.setTimeout(landSpin, SPIN_DURATION_MS + 120);
+    return () => window.clearTimeout(timer);
+  }, [state.phase, landSpin]);
+
   const advance = useCallback(() => {
     const current = stateRef.current;
     if (current.phase !== "result") return;
@@ -276,38 +286,7 @@ export const useAwardWheel = (): AwardWheelApi => {
     setState(next);
   }, []);
 
-  const derived = useMemo(() => {
-    const claimed = new Set(state.winners.map((winner) => winner.companyId));
-    const remaining = state.baseRoster.filter((company) => !claimed.has(company.id));
-    const pendingWinner =
-      state.phase === "spinning" || state.phase === "result"
-        ? state.winners[state.winners.length - 1] ?? null
-        : null;
-
-    const wheelCompanies = pendingWinner
-      ? state.baseRoster.filter(
-          (company) => !claimed.has(company.id) || company.id === pendingWinner.companyId,
-        )
-      : remaining;
-
-    const winnerIndex = pendingWinner
-      ? wheelCompanies.findIndex((company) => company.id === pendingWinner.companyId)
-      : -1;
-
-    return {
-      remaining,
-      wheelCompanies,
-      pendingWinner,
-      winnerIndex,
-      drawsRemaining: state.config.totalDraws - state.winners.length,
-      canSpin:
-        state.phase === "idle" &&
-        state.winners.length < state.config.totalDraws &&
-        remaining.length > 0,
-      canAdvance: state.phase === "result",
-      rosterLocked: state.winners.length > 0 || state.phase === "spinning",
-    };
-  }, [state]);
+  const derived = useMemo(() => deriveWheelView(state), [state]);
 
   return {
     config: state.config,

@@ -1,11 +1,23 @@
-import Index from "./pages/Index";
+import Control from "./pages/Control";
+import Launcher from "./pages/Launcher";
 import NotFound from "./pages/NotFound";
+import Stage from "./pages/Stage";
 
 export const routers = [
   {
     path: "/",
     name: "home",
-    element: <Index />,
+    element: <Launcher />,
+  },
+  {
+    path: "/control",
+    name: "control",
+    element: <Control />,
+  },
+  {
+    path: "/stage",
+    name: "stage",
+    element: <Stage />,
   },
   /* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */
   {

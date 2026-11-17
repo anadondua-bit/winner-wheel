@@ -1,27 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AwardWheel } from "@/components/award-wheel/AwardWheel";
-import { OperatorBar } from "@/components/award-wheel/OperatorBar";
-import { RosterDialog } from "@/components/award-wheel/RosterDialog";
 import { StageBackdrop } from "@/components/award-wheel/StageBackdrop";
 import { StageHeader } from "@/components/award-wheel/StageHeader";
 import { WinnerPanel } from "@/components/award-wheel/WinnerPanel";
 import { WinnersList } from "@/components/award-wheel/WinnersList";
-import { useAwardWheel } from "@/hooks/use-award-wheel";
-import { useDrawSync } from "@/hooks/use-draw-sync";
+import { useWheelMirror } from "@/hooks/use-wheel-mirror";
+import { isWheelAudioReady, resumeWheelAudio } from "@/lib/wheel-sound";
 
-/** The ceremony's LED wall: the wheel, the reveal and the host's controls. */
-const Index = () => {
-  const wheel = useAwardWheel();
-  const sync = useDrawSync({
-    winners: wheel.winners,
-    baseRoster: wheel.baseRoster,
-    config: wheel.config,
-    adoptRemote: wheel.adoptRemote,
-  });
-
-  const [rosterOpen, setRosterOpen] = useState(false);
+/**
+ * The LED wall: a read-only mirror of the draw, driven live from the
+ * command center. No buttons, no roster editor — this page only renders
+ * whatever state arrives.
+ */
+const Stage = () => {
+  const wheel = useWheelMirror();
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [audioArmed, setAudioArmed] = useState(false);
 
   const {
     config,
@@ -30,19 +25,8 @@ const Index = () => {
     wheelCompanies,
     pendingWinner,
     winnerIndex,
-    drawsRemaining,
-    canSpin,
-    canAdvance,
-    rosterLocked,
-    startSpin,
-    landSpin,
-    advance,
-    applyRoster,
-    updateConfig,
-    resetDraw,
+    status,
   } = wheel;
-
-  const { resetRemote } = sync;
 
   const toggleFullscreen = useCallback(async () => {
     try {
@@ -56,48 +40,46 @@ const Index = () => {
     }
   }, []);
 
-  const handleResetDraw = useCallback(() => {
-    resetDraw();
-    resetRemote();
-  }, [resetDraw, resetRemote]);
-
   useEffect(() => {
     const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
     document.addEventListener("fullscreenchange", onChange);
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
+  // Audio can't start until a real gesture happens on this page — the first
+  // tap, click or keypress on the TV machine arms it for the rest of the show.
+  useEffect(() => {
+    if (isWheelAudioReady()) {
+      setAudioArmed(true);
+      return;
+    }
+
+    const arm = () => {
+      void resumeWheelAudio().then(() => setAudioArmed(isWheelAudioReady()));
+    };
+
+    window.addEventListener("pointerdown", arm);
+    window.addEventListener("keydown", arm);
+    return () => {
+      window.removeEventListener("pointerdown", arm);
+      window.removeEventListener("keydown", arm);
+    };
+  }, []);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (rosterOpen) return;
-      const target = event.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable)
-      ) {
-        return;
-      }
-
-      if (event.code === "Space") {
-        event.preventDefault();
-        if (canAdvance) advance();
-        else if (canSpin) startSpin();
-        return;
-      }
       if (event.key.toLowerCase() === "f") {
         event.preventDefault();
         void toggleFullscreen();
       }
     };
-
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [rosterOpen, canAdvance, canSpin, advance, startSpin, toggleFullscreen]);
+  }, [toggleFullscreen]);
 
   // A drawn name must not appear in the list before the wheel has landed on it.
   const revealedWinners = phase === "spinning" ? winners.slice(0, -1) : winners;
+  const landedKey = phase === "result" && pendingWinner ? pendingWinner.draw : null;
 
   const backdrop =
     phase === "complete" ? "closing" : phase === "result" ? "reveal" : "stage";
@@ -108,6 +90,18 @@ const Index = () => {
       data-accent={config.accent}
     >
       <StageBackdrop variant={backdrop} />
+
+      {!audioArmed ? (
+        <button
+          type="button"
+          onClick={() => {
+            void resumeWheelAudio().then(() => setAudioArmed(isWheelAudioReady()));
+          }}
+          className="absolute bottom-[1.8vh] right-[1.8vh] z-20 rounded-full border border-brand-light/20 bg-brand-ink/60 px-[1em] py-[0.5em] text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-light/70 backdrop-blur transition-colors hover:bg-brand-ink/80 hover:text-brand-light"
+        >
+          Tap for sound
+        </button>
+      ) : null}
 
       <div className="relative z-10 flex h-full w-full items-center justify-center p-[1.8vh] max-lg:p-0">
         <div
@@ -122,6 +116,7 @@ const Index = () => {
             subtitle={config.subtitle}
             companiesInPlay={wheelCompanies.length}
             totalCompanies={wheel.baseRoster.length}
+            signal={status}
           />
 
           <main className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.03fr)_minmax(0,1fr)] items-stretch gap-[2.2vw] max-lg:grid-cols-1 max-lg:items-start max-lg:gap-5">
@@ -130,8 +125,7 @@ const Index = () => {
                 companies={wheelCompanies}
                 phase={phase}
                 winnerIndex={winnerIndex}
-                landedKey={phase === "result" && pendingWinner ? pendingWinner.draw : null}
-                onLanded={landSpin}
+                landedKey={landedKey}
               />
             </div>
 
@@ -146,37 +140,10 @@ const Index = () => {
               <WinnersList winners={revealedWinners} totalDraws={config.totalDraws} />
             </div>
           </main>
-
-          <OperatorBar
-            phase={phase}
-            canSpin={canSpin}
-            canAdvance={canAdvance}
-            winnersCount={winners.length}
-            totalDraws={config.totalDraws}
-            drawsRemaining={drawsRemaining}
-            saveStatus={sync.status}
-            isFullscreen={isFullscreen}
-            onSpin={startSpin}
-            onAdvance={advance}
-            onOpenRoster={() => setRosterOpen(true)}
-            onToggleFullscreen={toggleFullscreen}
-          />
         </div>
       </div>
-
-      <RosterDialog
-        open={rosterOpen}
-        onOpenChange={setRosterOpen}
-        roster={wheel.baseRoster}
-        config={config}
-        rosterLocked={rosterLocked}
-        winnersCount={winners.length}
-        onApplyRoster={applyRoster}
-        onUpdateConfig={updateConfig}
-        onResetDraw={handleResetDraw}
-      />
     </div>
   );
 };
 
-export default Index;
+export default Stage;

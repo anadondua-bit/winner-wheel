@@ -77,3 +77,46 @@ export const labelFontSize = (count: number, shortLength: number): number => {
 
 export const studPositions = (count: number): number[] =>
   Array.from({ length: count }, (_, index) => (index * 360) / count);
+
+/**
+ * WebKit's cubic-bezier solver (Newton-Raphson, bisection fallback), used so
+ * JS-timed effects (the spin's tick sound) can match a CSS `transition`
+ * curve exactly without reading computed style.
+ */
+const cubicBezier = (p1x: number, p1y: number, p2x: number, p2y: number) => {
+  const sampleX = (t: number) =>
+    ((1 - 3 * p2x + 3 * p1x) * t + (3 * p2x - 6 * p1x)) * t * t + 3 * p1x * t;
+  const sampleY = (t: number) =>
+    ((1 - 3 * p2y + 3 * p1y) * t + (3 * p2y - 6 * p1y)) * t * t + 3 * p1y * t;
+  const sampleDerivativeX = (t: number) =>
+    (3 * (1 - 3 * p2x + 3 * p1x) * t + 2 * (3 * p2x - 6 * p1x)) * t + 3 * p1x;
+
+  const solveX = (x: number, epsilon = 1e-6): number => {
+    let t = x;
+    for (let i = 0; i < 8; i += 1) {
+      const dx = sampleX(t) - x;
+      if (Math.abs(dx) < epsilon) return t;
+      const derivative = sampleDerivativeX(t);
+      if (Math.abs(derivative) < 1e-6) break;
+      t -= dx / derivative;
+    }
+    let low = 0;
+    let high = 1;
+    t = x;
+    if (t < low) return low;
+    if (t > high) return high;
+    while (low < high) {
+      const current = sampleX(t);
+      if (Math.abs(current - x) < epsilon) return t;
+      if (x > current) low = t;
+      else high = t;
+      t = (high - low) / 2 + low;
+    }
+    return t;
+  };
+
+  return (x: number): number => sampleY(solveX(x));
+};
+
+/** JS mirror of SPIN_EASING's control points — keep the two in sync. */
+export const spinEasing = cubicBezier(0.12, 0.66, 0.02, 0.99);

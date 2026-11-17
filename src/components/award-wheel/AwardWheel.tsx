@@ -5,6 +5,7 @@ import {
   landingRotation,
   spinTargetRotation,
 } from "@/lib/wheel-geometry";
+import { useWheelSpinSound } from "@/hooks/use-wheel-spin-sound";
 import type { Company, DrawPhase } from "@/lib/wheel-types";
 import { WheelChassis } from "./WheelChassis";
 import { WheelRotor } from "./WheelRotor";
@@ -15,23 +16,21 @@ type AwardWheelProps = {
   winnerIndex: number;
   /** Changes once per reveal so the pointer knock replays. */
   landedKey: number | null;
-  onLanded: () => void;
 };
 
 /**
  * The physical wheel: a rotating rotor over fixed rim, hub and pointer.
  * Rotation is CSS-driven so the landing angle is exact and cheap to animate.
+ * Phase timing is owned upstream (the draw hook); this component only
+ * reacts to phase/winnerIndex, so it works the same whether it's driven
+ * locally or mirrored live from another machine.
  */
-export const AwardWheel = ({
-  companies,
-  phase,
-  winnerIndex,
-  landedKey,
-  onLanded,
-}: AwardWheelProps) => {
+export const AwardWheel = ({ companies, phase, winnerIndex, landedKey }: AwardWheelProps) => {
   const [rotation, setRotation] = useState(() =>
     phase === "result" ? landingRotation(winnerIndex, companies.length) : 0,
   );
+
+  useWheelSpinSound({ phase, winnerIndex, companyCount: companies.length });
 
   useEffect(() => {
     if (phase === "result" && winnerIndex >= 0) {
@@ -44,12 +43,6 @@ export const AwardWheel = ({
     }
     setRotation(0);
   }, [phase, winnerIndex, companies.length]);
-
-  useEffect(() => {
-    if (phase !== "spinning") return;
-    const timer = window.setTimeout(onLanded, SPIN_DURATION_MS + 120);
-    return () => window.clearTimeout(timer);
-  }, [phase, onLanded]);
 
   const spinning = phase === "spinning";
 

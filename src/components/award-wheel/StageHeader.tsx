@@ -3,6 +3,14 @@ type StageHeaderProps = {
   subtitle: string;
   companiesInPlay: number;
   totalCompanies: number;
+  /** Connection to the command center; omit when this page has no remote link. */
+  signal?: "live" | "connecting" | "offline";
+};
+
+const SIGNAL_COPY: Record<NonNullable<StageHeaderProps["signal"]>, string> = {
+  live: "Live",
+  connecting: "Connecting",
+  offline: "Offline",
 };
 
 /** Ceremony masthead: event identity on the left, wheel status on the right. */
@@ -11,6 +19,7 @@ export const StageHeader = ({
   subtitle,
   companiesInPlay,
   totalCompanies,
+  signal = "live",
 }: StageHeaderProps) => (
   <header className="flex shrink-0 flex-wrap items-start justify-between gap-x-6 gap-y-3">
     <div className="min-w-0">
@@ -31,12 +40,17 @@ export const StageHeader = ({
 
     <div className="flex items-center gap-[1.4vw] max-lg:gap-5">
       <div className="flex items-center gap-[0.5vw] rounded-full border border-brand-light/15 bg-brand-ink/25 px-[1vw] py-[0.55vh] backdrop-blur">
-        <span className="live-dot h-[0.5em] w-[0.5em] rounded-full bg-brand-mint" aria-hidden="true" />
+        <span
+          className={`h-[0.5em] w-[0.5em] rounded-full ${
+            signal === "live" ? "live-dot bg-brand-mint" : signal === "connecting" ? "bg-brand-cyan" : "bg-destructive"
+          }`}
+          aria-hidden="true"
+        />
         <span
           className="font-semibold uppercase text-brand-light/70"
           style={{ fontSize: "clamp(8px, 0.62vw, 14px)", letterSpacing: "0.24em" }}
         >
-          Live
+          {SIGNAL_COPY[signal]}
         </span>
       </div>
 
