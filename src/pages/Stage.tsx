@@ -81,15 +81,12 @@ const Stage = () => {
   const revealedWinners = phase === "spinning" ? winners.slice(0, -1) : winners;
   const landedKey = phase === "result" && pendingWinner ? pendingWinner.draw : null;
 
-  const backdrop =
-    phase === "complete" ? "closing" : phase === "result" ? "reveal" : "stage";
-
   return (
     <div
       className="relative h-full w-full overflow-hidden bg-background"
       data-accent={config.accent}
     >
-      <StageBackdrop variant={backdrop} />
+      <StageBackdrop />
 
       {!audioArmed ? (
         <button

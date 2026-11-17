@@ -1,27 +1,15 @@
-type BackdropVariant = "stage" | "reveal" | "closing";
-
-const SOURCES: Record<BackdropVariant, string> = {
-  stage: "/brand/stage.jpg",
-  reveal: "/brand/reveal.jpg",
-  closing: "/brand/closing.jpg",
-};
-
-/** Literal modifier classes so Tailwind emits each backdrop variant. */
-const VARIANTS: Record<BackdropVariant, string> = {
-  stage: "stage-backdrop--stage",
-  reveal: "stage-backdrop--reveal",
-  closing: "stage-backdrop--closing",
-};
+const DEFAULT_IMAGE = "/brand/reveal.jpg";
 
 /**
- * Conference artwork supplied by production, exported at the wall's native
- * 2304 × 1280 and covered edge to edge behind the wheel.
+ * Conference artwork behind the wheel. One consistent look for the whole
+ * show — idle, spinning, reveal and complete all read as the same stage,
+ * so the room's lighting never visibly resets between draws.
  */
-export const StageBackdrop = ({ variant }: { variant: BackdropVariant }) => (
-  <div className={`stage-backdrop ${VARIANTS[variant]}`} aria-hidden="true">
+export const StageBackdrop = ({ imageUrl }: { imageUrl?: string }) => (
+  <div className="stage-backdrop" aria-hidden="true">
     <img
       className="stage-backdrop__image"
-      src={SOURCES[variant]}
+      src={imageUrl || DEFAULT_IMAGE}
       alt=""
       draggable={false}
     />

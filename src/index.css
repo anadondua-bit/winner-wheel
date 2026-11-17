@@ -198,7 +198,7 @@
     transition: opacity 1200ms ease, filter 1200ms ease;
   }
 
-  .stage-backdrop--reveal .stage-backdrop__image {
+  .stage-backdrop__image {
     filter: saturate(1.05) brightness(1.02);
   }
 
@@ -206,18 +206,8 @@
   .stage-backdrop__beams {
     position: absolute;
     inset: 0;
-    opacity: 0.4;
-    mix-blend-mode: screen;
-    transition: opacity 900ms ease;
-  }
-
-  .stage-backdrop--reveal .stage-backdrop__beams {
     opacity: 0.75;
-  }
-
-  .stage-backdrop--complete .stage-backdrop__beams,
-  .stage-backdrop--closing .stage-backdrop__beams {
-    opacity: 0.3;
+    mix-blend-mode: screen;
   }
 
   .stage-beam {
