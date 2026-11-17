@@ -1,4 +1,4 @@
-import { AlertTriangle, Lock, RotateCcw, Upload } from "lucide-react";
+import { AlertTriangle, Download, Lock, RotateCcw, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -23,14 +23,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { BrandingPanel } from "./BrandingPanel";
+import { RosterTable } from "./RosterTable";
+import { downloadTextFile } from "@/lib/csv";
 import {
-  formatRoster,
-  normalizeUploadedRoster,
-  parseRoster,
+  companiesFromCsv,
+  companiesToCsv,
+  createRosterRow,
+  parseRosterRows,
   sampleRoster,
 } from "@/lib/wheel-roster";
+import type { RosterRowDraft } from "@/lib/wheel-roster";
+import { configToSettingsCsv, settingsCsvToConfigPatch } from "@/lib/wheel-settings-csv";
 import type { AccentName, Branding, Company, WheelConfig } from "@/lib/wheel-types";
 
 type RosterDialogProps = {
@@ -55,6 +59,11 @@ const accents: Array<{ id: AccentName; label: string; swatch: string }> = [
 
 const parseSize = (value: string): number => Number(value.replace(/[^0-9]/g, ""));
 
+const companiesToRows = (companies: Company[]): RosterRowDraft[] =>
+  companies.map((company) => ({ rowKey: company.id, name: company.name, short: company.short }));
+
+const timestampForFilename = (): string => new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
+
 /** Operator settings: titles, accent and wall size, the roster, and every brand asset. */
 export const RosterDialog = ({
   open,
@@ -72,9 +81,10 @@ export const RosterDialog = ({
   const [accent, setAccent] = useState<AccentName>(config.accent);
   const [wallWidth, setWallWidth] = useState(String(config.wallWidth));
   const [wallHeight, setWallHeight] = useState(String(config.wallHeight));
-  const [rosterText, setRosterText] = useState(() => formatRoster(roster));
+  const [rows, setRows] = useState<RosterRowDraft[]>(() => companiesToRows(roster));
   const [branding, setBranding] = useState<Branding>(config.branding);
   const rosterFileRef = useRef<HTMLInputElement>(null);
+  const settingsFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -83,11 +93,14 @@ export const RosterDialog = ({
     setAccent(config.accent);
     setWallWidth(String(config.wallWidth));
     setWallHeight(String(config.wallHeight));
-    setRosterText(formatRoster(roster));
+    setRows(companiesToRows(roster));
     setBranding(config.branding);
   }, [open, config, roster]);
 
-  const parsed = useMemo(() => parseRoster(rosterText), [rosterText]);
+  const parsed = useMemo(
+    () => parseRosterRows(rows.map((row) => ({ name: row.name, short: row.short }))),
+    [rows],
+  );
   const isSample =
     roster.length === sampleRoster.length &&
     roster.every((company, index) => company.id === sampleRoster[index]?.id);
@@ -100,11 +113,47 @@ export const RosterDialog = ({
   // and safe to change live, so only a genuinely broken roster blocks Apply.
   const canApply = (rosterLocked || parsed.problems.length === 0) && wallOk;
 
-  const handleRosterFile = (file: File | undefined) => {
+  const handleImportRosterCsv = (file: File | undefined) => {
     if (!file) return;
     void file
       .text()
-      .then((text) => setRosterText(normalizeUploadedRoster(text)))
+      .then((text) => {
+        const imported = companiesFromCsv(text);
+        if (!imported.length) {
+          toast.error("No companies found in that file");
+          return;
+        }
+        setRows(imported.map((entry) => ({ ...createRosterRow(), ...entry })));
+        toast.success(`Imported ${imported.length} companies`);
+      })
+      .catch(() => toast.error(`Could not read "${file.name}"`));
+  };
+
+  const handleExportRosterCsv = () => {
+    downloadTextFile(`roster-${timestampForFilename()}.csv`, companiesToCsv(parsed.companies));
+  };
+
+  const handleExportSettingsCsv = () => {
+    downloadTextFile(
+      `wheel-settings-${timestampForFilename()}.csv`,
+      configToSettingsCsv({ ...config, title, subtitle, accent, wallWidth: width, wallHeight: height, branding }),
+    );
+  };
+
+  const handleImportSettingsCsv = (file: File | undefined) => {
+    if (!file) return;
+    void file
+      .text()
+      .then((text) => {
+        const patch = settingsCsvToConfigPatch(text);
+        if (patch.title !== undefined) setTitle(patch.title);
+        if (patch.subtitle !== undefined) setSubtitle(patch.subtitle);
+        if (patch.accent !== undefined) setAccent(patch.accent);
+        if (patch.wallWidth !== undefined) setWallWidth(String(patch.wallWidth));
+        if (patch.wallHeight !== undefined) setWallHeight(String(patch.wallHeight));
+        if (patch.branding !== undefined) setBranding(patch.branding);
+        toast.success("Settings imported — review, then Apply");
+      })
       .catch(() => toast.error(`Could not read "${file.name}"`));
   };
 
@@ -126,13 +175,47 @@ export const RosterDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92dvh] w-[min(96vw,980px)] max-w-none gap-0 overflow-y-auto rounded-[1.4rem] border-brand-light/15 bg-card/95 p-[clamp(16px,2.4vw,40px)] text-foreground shadow-2xl backdrop-blur-2xl">
         <DialogHeader className="gap-1">
-          <DialogTitle className="font-display text-[clamp(18px,1.6vw,28px)] font-extrabold tracking-tight">
-            Roster &amp; branding
-          </DialogTitle>
-          <DialogDescription className="text-[clamp(11px,0.8vw,14px)] text-brand-light/50">
-            Everything the audience sees that isn't the draw itself: titles, the company list and
-            every brand asset.
-          </DialogDescription>
+          <div className="flex flex-wrap items-start justify-between gap-3 pr-8">
+            <div>
+              <DialogTitle className="font-display text-[clamp(18px,1.6vw,28px)] font-extrabold tracking-tight">
+                Roster &amp; branding
+              </DialogTitle>
+              <DialogDescription className="text-[clamp(11px,0.8vw,14px)] text-brand-light/50">
+                Everything the audience sees that isn't the draw itself.
+              </DialogDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="quiet"
+                size="sm"
+                className="h-7 rounded-full px-3 text-[11px]"
+                onClick={handleExportSettingsCsv}
+                title="Download every title, accent, wall-size and branding value as a CSV backup"
+              >
+                <Download className="mr-1.5 h-3 w-3" aria-hidden="true" />
+                Export settings
+              </Button>
+              <Button
+                type="button"
+                variant="quiet"
+                size="sm"
+                className="h-7 rounded-full px-3 text-[11px]"
+                onClick={() => settingsFileRef.current?.click()}
+                title="Restore titles, accent, wall size and branding from a settings CSV"
+              >
+                <Upload className="mr-1.5 h-3 w-3" aria-hidden="true" />
+                Import settings
+              </Button>
+              <input
+                ref={settingsFileRef}
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={(event) => handleImportSettingsCsv(event.target.files?.[0])}
+              />
+            </div>
+          </div>
         </DialogHeader>
 
         {rosterLocked && (
@@ -272,9 +355,7 @@ export const RosterDialog = ({
 
           <TabsContent value="roster" className="mt-5 grid gap-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <Label htmlFor="roster" className={fieldLabel}>
-                Company list
-              </Label>
+              <Label className={fieldLabel}>Company list</Label>
               <div className="flex items-center gap-2">
                 {isSample && (
                   <span className="rounded-full border border-brand-cyan/30 bg-brand-cyan/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-light/60">
@@ -289,33 +370,38 @@ export const RosterDialog = ({
                   variant="quiet"
                   size="sm"
                   className="h-7 rounded-full px-3 text-[11px]"
+                  onClick={handleExportRosterCsv}
+                  disabled={!parsed.companies.length}
+                >
+                  <Download className="mr-1.5 h-3 w-3" aria-hidden="true" />
+                  Export CSV
+                </Button>
+                <Button
+                  type="button"
+                  variant="quiet"
+                  size="sm"
+                  className="h-7 rounded-full px-3 text-[11px]"
                   onClick={() => rosterFileRef.current?.click()}
                   disabled={rosterLocked}
                 >
                   <Upload className="mr-1.5 h-3 w-3" aria-hidden="true" />
-                  Upload file
+                  Import CSV
                 </Button>
                 <input
                   ref={rosterFileRef}
                   type="file"
                   accept=".csv,.txt,text/csv,text/plain"
                   className="hidden"
-                  onChange={(event) => handleRosterFile(event.target.files?.[0])}
+                  onChange={(event) => handleImportRosterCsv(event.target.files?.[0])}
                 />
               </div>
             </div>
-            <Textarea
-              id="roster"
-              spellCheck={false}
-              value={rosterText}
-              onChange={(event) => setRosterText(event.target.value)}
-              disabled={rosterLocked}
-              className="min-h-[clamp(180px,30vh,320px)] resize-y border-brand-light/15 bg-brand-ink/50 font-mono text-[13px] leading-6 text-brand-light/90 disabled:opacity-50"
-            />
+
+            <RosterTable rows={rows} onChange={setRows} disabled={rosterLocked} />
+
             <p className="text-[11px] leading-relaxed text-brand-light/35">
-              One company per line as <span className="text-brand-light/70">Full Name | SHORT</span>.
-              Short names are what appears on the wheel; full names appear on the reveal. A
-              CSV upload's first comma is treated the same way.
+              Leave "Short" blank to derive it from the name. Import replaces the whole list;
+              export downloads exactly what's in the table right now.
             </p>
 
             {!rosterLocked && (parsed.problems.length > 0 || parsed.warnings.length > 0) && (

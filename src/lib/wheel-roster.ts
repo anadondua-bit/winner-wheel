@@ -1,3 +1,4 @@
+import { toCsvRow, parseCsv } from "./csv";
 import type { Branding, Company, DrawState, RosterParseResult, WheelConfig } from "./wheel-types";
 
 export const TOTAL_DRAWS = 15;
@@ -133,22 +134,34 @@ export const normalizeUploadedRoster = (text: string): string =>
     })
     .join("\n");
 
-/** Parses the operator's pasted roster and reports what blocks the draw. */
-export const parseRoster = (text: string): RosterParseResult => {
+export type RosterRow = { name: string; short: string };
+
+/** A roster-table row's React identity, independent of its editable fields. */
+export type RosterRowDraft = RosterRow & { rowKey: string };
+
+const newRowKey = (): string =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `row-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+export const createRosterRow = (): RosterRowDraft => ({ rowKey: newRowKey(), name: "", short: "" });
+
+/**
+ * The one place that decides what makes a roster valid: no blank/duplicate
+ * names, short names deduped and length-capped, derived when left blank,
+ * and an overall count between TOTAL_DRAWS and 120. Shared by the text
+ * textarea, the row-by-row table editor and CSV import — all three just
+ * get rows into this shape first.
+ */
+const buildRoster = (rows: RosterRow[]): RosterParseResult => {
   const problems: string[] = [];
   const warnings: string[] = [];
-  const lines = text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-
   const companies: Company[] = [];
   const seenNames = new Set<string>();
   const seenShorts = new Set<string>();
 
-  lines.forEach((line) => {
-    const [rawName, rawShort] = line.split(/\s*[|;\t]\s*/);
-    const name = (rawName ?? "").trim().replace(/\s+/g, " ");
+  rows.forEach((row) => {
+    const name = row.name.trim().replace(/\s+/g, " ");
     if (!name) return;
 
     const key = name.toLowerCase();
@@ -158,7 +171,7 @@ export const parseRoster = (text: string): RosterParseResult => {
     }
     seenNames.add(key);
 
-    const short = (rawShort ?? "").trim().toUpperCase();
+    const short = row.short.trim().toUpperCase();
     const label = short || shortenName(name);
     if (short && short.length > SHORT_NAME_LIMIT) {
       warnings.push(`"${short}" is longer than ${SHORT_NAME_LIMIT} characters on the wheel.`);
@@ -186,4 +199,38 @@ export const parseRoster = (text: string): RosterParseResult => {
   }
 
   return { companies, problems, warnings };
+};
+
+/** Parses the operator's pasted roster and reports what blocks the draw. */
+export const parseRoster = (text: string): RosterParseResult => {
+  const rows = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [rawName, rawShort] = line.split(/\s*[|;\t]\s*/);
+      return { name: rawName ?? "", short: rawShort ?? "" };
+    });
+
+  return buildRoster(rows);
+};
+
+/** Same validation, for editors that already hold structured rows (the table, CSV import). */
+export const parseRosterRows = (rows: RosterRow[]): RosterParseResult => buildRoster(rows);
+
+/** "Full Name,SHORT" per line, quoted if either field needs it. */
+export const companiesToCsv = (companies: Company[]): string =>
+  ["name,short", ...companies.map((company) => toCsvRow([company.name, company.short]))].join("\n");
+
+/** Accepts an optional "name,short" header row; tolerates a name-only column. */
+export const companiesFromCsv = (text: string): RosterRow[] => {
+  const rows = parseCsv(text);
+  if (!rows.length) return [];
+
+  const looksLikeHeader = rows[0]?.[0]?.trim().toLowerCase() === "name";
+  const dataRows = looksLikeHeader ? rows.slice(1) : rows;
+
+  return dataRows
+    .filter((row) => row.some((field) => field.trim()))
+    .map((row) => ({ name: (row[0] ?? "").trim(), short: (row[1] ?? "").trim() }));
 };

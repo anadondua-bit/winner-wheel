@@ -1,7 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
-import { defaultBranding, SEGMENT_SLOT_COUNT } from "./wheel-roster";
-import type { Branding, Company, FontChoice, Winner } from "./wheel-types";
+import { defaultBranding } from "./wheel-roster";
+import { normalizeBranding } from "./wheel-normalize";
+import type { Branding, Company, Winner } from "./wheel-types";
 
 /**
  * Durable show record. Runs and winners are append-only: a reset starts a new
@@ -42,43 +43,13 @@ const parseCompanies = (value: Json | undefined): Company[] => {
   });
 };
 
-const isHex = (value: unknown): value is string =>
-  typeof value === "string" && /^#?[0-9a-fA-F]{6}$/.test(value);
-
-const toHexOrNull = (value: unknown): string | null => (isHex(value) ? value : null);
-
-const toFont = (value: unknown): FontChoice =>
-  value === "system-sans" || value === "system-serif" || value === "system-mono" || value === "custom"
-    ? value
-    : "manrope";
-
-const parseBranding = (value: Json | undefined): Branding => {
-  if (!isRecord(value)) return defaultBranding;
-  const segmentColorsRaw = Array.isArray(value.segmentColors) ? value.segmentColors : [];
-
-  return {
-    logoDataUrl: typeof value.logoDataUrl === "string" ? value.logoDataUrl : null,
-    backgroundDataUrl: typeof value.backgroundDataUrl === "string" ? value.backgroundDataUrl : null,
-    font: toFont(value.font),
-    customFontDataUrl: typeof value.customFontDataUrl === "string" ? value.customFontDataUrl : null,
-    customFontName: typeof value.customFontName === "string" ? value.customFontName : null,
-    brandMint: toHexOrNull(value.brandMint),
-    brandTeal: toHexOrNull(value.brandTeal),
-    brandCyan: toHexOrNull(value.brandCyan),
-    brandBlue: toHexOrNull(value.brandBlue),
-    segmentColors: Array.from({ length: SEGMENT_SLOT_COUNT }, (_, index) =>
-      toHexOrNull(segmentColorsRaw[index]),
-    ),
-  };
-};
-
 const parseRosterPayload = (value: Json): { companies: Company[]; branding: Branding } => {
   if (Array.isArray(value)) {
     // Legacy shape, from before branding existed: a bare company array.
     return { companies: parseCompanies(value), branding: defaultBranding };
   }
   if (isRecord(value)) {
-    return { companies: parseCompanies(value.companies), branding: parseBranding(value.branding) };
+    return { companies: parseCompanies(value.companies), branding: normalizeBranding(value.branding) };
   }
   return { companies: [], branding: defaultBranding };
 };
