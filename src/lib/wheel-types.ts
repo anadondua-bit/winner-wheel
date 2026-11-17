@@ -43,6 +43,8 @@ export type Branding = {
   brandBlue: string | null;
   /** Hex override per wheel segment slot (cycles across however many companies are on the wheel); null keeps the derived default. */
   segmentColors: Array<string | null>;
+  /** How many of the segment color slots actually get cycled across the wheel (2–10); fewer reads bolder/more graphic. */
+  segmentColorCount: number;
 };
 
 export type WheelConfig = {

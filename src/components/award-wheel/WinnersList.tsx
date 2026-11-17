@@ -1,6 +1,3 @@
-import { Check, Copy } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
 import type { Winner } from "@/lib/wheel-types";
 
 type WinnersListProps = {
@@ -16,25 +13,9 @@ const formatTime = (iso: string) => {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 };
 
-/** Running list of winners in reveal order, kept for the production team. */
+/** Running list of winners in reveal order — audience-facing, read only. */
 export const WinnersList = ({ winners, totalDraws }: WinnersListProps) => {
-  const [copied, setCopied] = useState(false);
   const latestId = winners[winners.length - 1]?.companyId;
-
-  const copyWinners = async () => {
-    if (!winners.length) return;
-    const text = winners
-      .map((winner) => `${pad(winner.draw)}. ${winner.name} (${formatTime(winner.wonAt)})`)
-      .join("\n");
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      toast.success("Winners copied");
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast.error("Copy not available in this browser");
-    }
-  };
 
   return (
     <section className="panel-glass flex min-h-[10vh] max-h-[31vh] flex-col overflow-hidden rounded-[1.4rem] px-[1.7vw] py-[1.8vh] max-lg:px-5">
@@ -54,17 +35,6 @@ export const WinnersList = ({ winners, totalDraws }: WinnersListProps) => {
             <span className="text-brand-light/30"> / {pad(totalDraws)}</span>
           </span>
         </div>
-
-        <button
-          type="button"
-          onClick={copyWinners}
-          disabled={!winners.length}
-          className="inline-flex items-center gap-[0.4em] rounded-full border border-brand-light/15 bg-brand-light/[0.04] px-[0.8em] py-[0.35em] font-semibold uppercase text-brand-light/60 transition-colors hover:bg-brand-light/10 hover:text-brand-light/90 disabled:opacity-30"
-          style={{ fontSize: "clamp(8px, 0.6vw, 13px)", letterSpacing: "0.2em" }}
-        >
-          {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-          Copy
-        </button>
       </header>
 
       <div className="panel-rule" />

@@ -1,6 +1,7 @@
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, Download } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { downloadTextFile, toCsvRow } from "@/lib/csv";
 import type { Winner } from "@/lib/wheel-types";
 
 type WinnersLedgerProps = {
@@ -16,7 +17,7 @@ const formatTime = (iso: string) => {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 };
 
-/** Dashboard-styled record of every reveal, for the production team to copy. */
+/** Dashboard-styled record of every reveal, for the production team to copy or export. */
 export const WinnersLedger = ({ winners, totalDraws }: WinnersLedgerProps) => {
   const [copied, setCopied] = useState(false);
 
@@ -35,6 +36,16 @@ export const WinnersLedger = ({ winners, totalDraws }: WinnersLedgerProps) => {
     }
   };
 
+  const exportWinners = () => {
+    if (!winners.length) return;
+    const rows = [
+      "draw,name,short,wonAt",
+      ...winners.map((winner) => toCsvRow([String(winner.draw), winner.name, winner.short, winner.wonAt])),
+    ];
+    const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
+    downloadTextFile(`winners-${stamp}.csv`, rows.join("\n"));
+  };
+
   return (
     <section className="panel-glass flex min-h-0 flex-1 flex-col rounded-[1.5rem] px-6 py-5">
       <header className="flex items-center justify-between gap-3 pb-3">
@@ -45,15 +56,26 @@ export const WinnersLedger = ({ winners, totalDraws }: WinnersLedgerProps) => {
             <span className="text-brand-light/30"> / {pad(totalDraws)}</span>
           </span>
         </div>
-        <button
-          type="button"
-          onClick={copyWinners}
-          disabled={!winners.length}
-          className="inline-flex items-center gap-1.5 rounded-full border border-brand-light/15 bg-brand-light/[0.04] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-light/60 transition-colors hover:bg-brand-light/10 hover:text-brand-light/90 disabled:opacity-30"
-        >
-          {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-          Copy
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={exportWinners}
+            disabled={!winners.length}
+            className="inline-flex items-center gap-1.5 rounded-full border border-brand-light/15 bg-brand-light/[0.04] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-light/60 transition-colors hover:bg-brand-light/10 hover:text-brand-light/90 disabled:opacity-30"
+          >
+            <Download className="h-3 w-3" />
+            Export
+          </button>
+          <button
+            type="button"
+            onClick={copyWinners}
+            disabled={!winners.length}
+            className="inline-flex items-center gap-1.5 rounded-full border border-brand-light/15 bg-brand-light/[0.04] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-light/60 transition-colors hover:bg-brand-light/10 hover:text-brand-light/90 disabled:opacity-30"
+          >
+            {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+            Copy
+          </button>
+        </div>
       </header>
 
       <div className="panel-rule" />

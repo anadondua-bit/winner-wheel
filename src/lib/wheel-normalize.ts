@@ -48,5 +48,6 @@ export const normalizeBranding = (value: unknown): Branding => {
     segmentColors: Array.from({ length: SEGMENT_SLOT_COUNT }, (_, index) =>
       toHexOrNull(segmentColorsRaw[index]),
     ),
+    segmentColorCount: clampInt(value.segmentColorCount, 2, SEGMENT_SLOT_COUNT, SEGMENT_SLOT_COUNT),
   };
 };

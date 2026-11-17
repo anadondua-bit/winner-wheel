@@ -29,8 +29,6 @@ export const resumeWheelAudio = (): Promise<void> => {
   return Promise.resolve();
 };
 
-export const isWheelAudioReady = (): boolean => getContext()?.state === "running";
-
 /**
  * One short digital tick as a wheel segment passes the pointer. Pitch and
  * brightness scale with `intensity` (0–1, the wheel's instantaneous speed),

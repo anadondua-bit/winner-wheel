@@ -17,6 +17,7 @@ export const defaultBranding: Branding = {
   brandCyan: null,
   brandBlue: null,
   segmentColors: Array(SEGMENT_SLOT_COUNT).fill(null),
+  segmentColorCount: SEGMENT_SLOT_COUNT,
 };
 
 export const defaultConfig: WheelConfig = {

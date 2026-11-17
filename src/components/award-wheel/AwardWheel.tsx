@@ -16,6 +16,8 @@ type AwardWheelProps = {
   winnerIndex: number;
   /** Changes once per reveal so the pointer knock replays. */
   landedKey: number | null;
+  /** How many of the 10 segment-color slots to cycle through. */
+  segmentColorCount?: number;
 };
 
 /**
@@ -25,7 +27,13 @@ type AwardWheelProps = {
  * reacts to phase/winnerIndex, so it works the same whether it's driven
  * locally or mirrored live from another machine.
  */
-export const AwardWheel = ({ companies, phase, winnerIndex, landedKey }: AwardWheelProps) => {
+export const AwardWheel = ({
+  companies,
+  phase,
+  winnerIndex,
+  landedKey,
+  segmentColorCount,
+}: AwardWheelProps) => {
   const [rotation, setRotation] = useState(() =>
     phase === "result" ? landingRotation(winnerIndex, companies.length) : 0,
   );
@@ -73,7 +81,12 @@ export const AwardWheel = ({ companies, phase, winnerIndex, landedKey }: AwardWh
           willChange: "transform",
         }}
       >
-        <WheelRotor companies={companies} phase={phase} winnerIndex={winnerIndex} />
+        <WheelRotor
+          companies={companies}
+          phase={phase}
+          winnerIndex={winnerIndex}
+          segmentColorCount={segmentColorCount}
+        />
       </div>
 
       <div className="pointer-events-none absolute inset-0">

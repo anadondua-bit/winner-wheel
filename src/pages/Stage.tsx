@@ -7,7 +7,7 @@ import { WinnerPanel } from "@/components/award-wheel/WinnerPanel";
 import { WinnersList } from "@/components/award-wheel/WinnersList";
 import { useApplyBranding } from "@/hooks/use-apply-branding";
 import { useWheelMirror } from "@/hooks/use-wheel-mirror";
-import { isWheelAudioReady, resumeWheelAudio } from "@/lib/wheel-sound";
+import { resumeWheelAudio } from "@/lib/wheel-sound";
 
 /**
  * The LED wall: a read-only mirror of the draw, driven live from the
@@ -17,7 +17,6 @@ import { isWheelAudioReady, resumeWheelAudio } from "@/lib/wheel-sound";
 const Stage = () => {
   const wheel = useWheelMirror();
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [audioArmed, setAudioArmed] = useState(false);
 
   const {
     config,
@@ -50,17 +49,13 @@ const Stage = () => {
   }, []);
 
   // Audio can't start until a real gesture happens on this page — the first
-  // tap, click or keypress on the TV machine arms it for the rest of the show.
+  // tap, click or keypress on the TV machine (e.g. the fullscreen button, or
+  // F) arms it for the rest of the show. No on-screen prompt for this: it's
+  // a silent side effect of whatever the AV tech does to set the page up.
   useEffect(() => {
-    if (isWheelAudioReady()) {
-      setAudioArmed(true);
-      return;
-    }
-
     const arm = () => {
-      void resumeWheelAudio().then(() => setAudioArmed(isWheelAudioReady()));
+      void resumeWheelAudio();
     };
-
     window.addEventListener("pointerdown", arm);
     window.addEventListener("keydown", arm);
     return () => {
@@ -91,18 +86,6 @@ const Stage = () => {
     >
       <StageBackdrop imageUrl={config.branding.backgroundDataUrl ?? undefined} />
 
-      {!audioArmed ? (
-        <button
-          type="button"
-          onClick={() => {
-            void resumeWheelAudio().then(() => setAudioArmed(isWheelAudioReady()));
-          }}
-          className="absolute bottom-[1.8vh] right-[1.8vh] z-20 rounded-full border border-brand-light/20 bg-brand-ink/60 px-[1em] py-[0.5em] text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-light/70 backdrop-blur transition-colors hover:bg-brand-ink/80 hover:text-brand-light"
-        >
-          Tap for sound
-        </button>
-      ) : null}
-
       <div className="relative z-10 flex h-full w-full items-center justify-center p-[1.8vh] max-lg:p-0">
         <div
           className="flex h-full flex-col gap-[1.7vh] max-lg:gap-4 max-lg:overflow-y-auto max-lg:px-4 max-lg:py-4"
@@ -129,6 +112,7 @@ const Stage = () => {
                 phase={phase}
                 winnerIndex={winnerIndex}
                 landedKey={landedKey}
+                segmentColorCount={config.branding.segmentColorCount}
               />
             </div>
 

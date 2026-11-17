@@ -33,6 +33,7 @@ export const configToSettingsCsv = (config: WheelConfig): string => {
   BRANDING_SCALAR_KEYS.forEach((key) => {
     rows.push([`branding.${key}`, config.branding[key] ?? ""]);
   });
+  rows.push(["branding.segmentColorCount", String(config.branding.segmentColorCount)]);
   config.branding.segmentColors.forEach((hex, index) => {
     rows.push([`branding.segmentColors.${index + 1}`, hex ?? ""]);
   });
@@ -59,6 +60,7 @@ export const settingsCsvToConfigPatch = (text: string): Partial<Omit<WheelConfig
     { length: SEGMENT_SLOT_COUNT },
     (_, index) => map.get(`branding.segmentColors.${index + 1}`) || null,
   );
+  brandingRecord.segmentColorCount = map.get("branding.segmentColorCount");
 
   return {
     title: map.get("title")?.trim() || defaultConfig.title,

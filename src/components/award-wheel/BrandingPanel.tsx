@@ -287,9 +287,39 @@ export const BrandingPanel = ({ branding, accent, onChange }: BrandingPanelProps
         <p className="text-[11px] leading-relaxed text-brand-light/35">
           Cycles across however many companies are on the wheel.
         </p>
+
+        <div className="flex items-center gap-3 rounded-[0.7rem] border border-brand-light/12 px-3 py-2">
+          <label htmlFor="segment-color-count" className="text-[11px] font-semibold text-brand-light/70">
+            Number of wheel colors
+          </label>
+          <input
+            id="segment-color-count"
+            type="range"
+            min={2}
+            max={segmentDefaults.length}
+            value={branding.segmentColorCount}
+            onChange={(event) =>
+              onChange({ ...branding, segmentColorCount: Number(event.target.value) })
+            }
+            className="h-1.5 flex-1 accent-brand-mint"
+          />
+          <span className="tabular w-5 text-right text-[12px] font-semibold text-brand-light">
+            {branding.segmentColorCount}
+          </span>
+        </div>
+        <p className="text-[11px] leading-relaxed text-brand-light/35">
+          Fewer colors repeat the pattern sooner for a bolder, more graphic wheel. Dimmed swatches
+          below aren't currently used.
+        </p>
+
         <div className="grid grid-cols-5 gap-2.5 sm:grid-cols-10">
           {branding.segmentColors.map((hex, index) => (
-            <div key={index} className="flex flex-col items-center gap-1">
+            <div
+              key={index}
+              className={`flex flex-col items-center gap-1 ${
+                index >= branding.segmentColorCount ? "opacity-35" : ""
+              }`}
+            >
               <input
                 type="color"
                 value={hex ?? segmentDefaults[index]}

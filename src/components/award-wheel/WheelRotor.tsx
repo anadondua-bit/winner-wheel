@@ -11,6 +11,8 @@ type WheelRotorProps = {
   companies: Company[];
   phase: DrawPhase;
   winnerIndex: number;
+  /** How many of the 10 fill slots to cycle through; clamped to [1, 10]. */
+  segmentColorCount?: number;
 };
 
 /**
@@ -32,8 +34,9 @@ const SEGMENT_FILLS = [
 ] as const;
 
 /** Rotating half of the wheel: coloured segments, separators and short names. */
-export const WheelRotor = ({ companies, phase, winnerIndex }: WheelRotorProps) => {
+export const WheelRotor = ({ companies, phase, winnerIndex, segmentColorCount }: WheelRotorProps) => {
   const count = companies.length;
+  const cycleLength = Math.min(SEGMENT_FILLS.length, Math.max(1, segmentColorCount ?? SEGMENT_FILLS.length));
 
   return (
     <svg viewBox="0 0 1000 1000" className="h-full w-full">
@@ -60,7 +63,7 @@ export const WheelRotor = ({ companies, phase, winnerIndex }: WheelRotorProps) =
             <path
               d={segmentPath(index, count)}
               className={`wheel-hairline ${
-                isWinner ? "seg-fill-winner" : SEGMENT_FILLS[index % SEGMENT_FILLS.length]
+                isWinner ? "seg-fill-winner" : SEGMENT_FILLS[index % cycleLength]
               }`}
               strokeWidth={1.4}
             />
