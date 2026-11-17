@@ -49,8 +49,12 @@ export const StageHeader = ({
           <span className="eyebrow truncate">{subtitle || "Live draw"}</span>
         </div>
         <h1
-          className="mt-[0.7vh] truncate font-display font-extrabold uppercase text-brand-light/90"
-          style={{ fontSize: "clamp(13px, 1.42vw, 33px)", letterSpacing: "0.17em" }}
+          className="mt-[0.7vh] truncate font-display font-extrabold uppercase"
+          style={{
+            fontSize: "clamp(13px, 1.42vw, 33px)",
+            letterSpacing: "0.17em",
+            color: "hsl(var(--text-header-title))",
+          }}
         >
           {title}
         </h1>
@@ -61,7 +65,7 @@ export const StageHeader = ({
       <div className="flex items-center gap-[0.5vw] rounded-full border border-brand-light/15 bg-brand-ink/25 px-[1vw] py-[0.55vh] backdrop-blur">
         <span
           className={`h-[0.5em] w-[0.5em] rounded-full ${
-            signal === "live" ? "live-dot bg-brand-mint" : signal === "connecting" ? "bg-brand-cyan" : "bg-destructive"
+            signal === "live" ? "live-dot bg-primary" : signal === "connecting" ? "bg-brand-cyan" : "bg-destructive"
           }`}
           aria-hidden="true"
         />

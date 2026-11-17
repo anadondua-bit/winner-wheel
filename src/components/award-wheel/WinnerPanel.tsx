@@ -67,7 +67,7 @@ export const WinnerPanel = ({
 
   return (
     <section
-      className="panel-glass relative flex min-h-0 flex-1 flex-col justify-between overflow-hidden rounded-[1.7rem] px-[2.1vw] py-[2.4vh] max-lg:px-6"
+      className="panel-glass panel-glass--winner relative flex min-h-0 flex-1 flex-col justify-between overflow-hidden rounded-[1.7rem] px-[2.1vw] py-[2.4vh] max-lg:px-6"
       aria-live="polite"
     >
       <span

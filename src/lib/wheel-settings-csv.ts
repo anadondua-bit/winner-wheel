@@ -19,6 +19,18 @@ const BRANDING_SCALAR_KEYS = [
   "brandBlue",
   "logoDataUrl",
   "backgroundDataUrl",
+  "winnerFill",
+  "winnerLabel",
+  "rimStart",
+  "rimEnd",
+  "hub",
+  "pointer",
+  "headerTitle",
+  "stageText",
+  "accentButtons",
+  "tintWinnerPanel",
+  "tintWinnersRail",
+  "tintControlBar",
 ] as const;
 
 export const configToSettingsCsv = (config: WheelConfig): string => {

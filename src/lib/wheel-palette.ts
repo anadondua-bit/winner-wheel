@@ -31,3 +31,24 @@ const SEGMENT_HSL = [
 ];
 
 export const defaultSegmentHex = (): string[] => SEGMENT_HSL.map(hslTripletToHex);
+
+/**
+ * Exact hex defaults for every other wheel-part/canvas color — these are
+ * authoritative (not derived from an accent), and index.css's :root carries
+ * the same values pre-converted to HSL so the look is identical before the
+ * operator ever opens the panel.
+ */
+export const WHEEL_PART_DEFAULT_HEX = {
+  winnerFill: "#4BDDBB",
+  winnerLabel: "#08120F",
+  rimStart: "#25937D",
+  rimEnd: "#0A1214",
+  hub: "#CFDCDD",
+  pointer: "#E6F7F0",
+  headerTitle: "#EEF2F2",
+  stageText: "#EEF2F2",
+  accentButtons: "#31B496",
+  tintWinnerPanel: "#EAF4F2",
+  tintWinnersRail: "#E4F0F1",
+  tintControlBar: "#E6F2F1",
+} as const;

@@ -66,10 +66,23 @@
     --seg-9: 185 62% 21%;
     --seg-10: 192 56% 33%;
 
-    /* Machined metal for the rim, hub and pointer */
-    --metal-hi: 180 18% 96%;
-    --metal-mid: 195 14% 74%;
-    --metal-low: 200 16% 38%;
+    /* Winning segment highlight */
+    --winner-fill: 166 68% 58%; /* #4BDDBB */
+    --winner-label: 162 38% 5%; /* #08120F */
+
+    /* Wheel chassis: rim gradient, hub, pointer */
+    --rim-start: 168 60% 36%; /* #25937D */
+    --rim-end: 192 33% 6%; /* #0A1214 */
+    --hub: 184 17% 84%; /* #CFDCDD */
+    --pointer: 155 52% 94%; /* #E6F7F0 */
+
+    /* Canvas text, independently editable from --brand-light even though it starts identical */
+    --text-header-title: 180 14% 94%;
+
+    /* Panel tints — subtle hue shift mixed into the dark glass, not a literal background */
+    --tint-winner-panel: 168 31% 94%; /* #EAF4F2 */
+    --tint-winners-rail: 185 32% 92%; /* #E4F0F1 */
+    --tint-control-bar: 175 32% 93%; /* #E6F2F1 */
 
     --stage-shadow: 0 40px 120px -40px hsl(var(--primary) / 0.55);
 
@@ -151,11 +164,11 @@
   .seg-fill-8 { fill: hsl(var(--seg-8)); }
   .seg-fill-9 { fill: hsl(var(--seg-9)); }
   .seg-fill-10 { fill: hsl(var(--seg-10)); }
-  .seg-fill-winner { fill: url(#winner-segment); }
+  .seg-fill-winner { fill: hsl(var(--winner-fill)); }
 
   .wheel-hairline { stroke: hsl(var(--brand-ink) / 0.5); }
   .label-bright { fill: hsl(var(--brand-light) / 0.96); }
-  .label-ink { fill: hsl(var(--brand-ink)); }
+  .label-ink { fill: hsl(var(--winner-label)); }
   .label-halo { stroke: hsl(var(--brand-ink) / 0.32); }
 
   .rim-halo { stroke: hsl(var(--brand-mint) / 0.16); }
@@ -168,13 +181,13 @@
   .stud-ring { stroke: hsl(var(--brand-ink) / 0.35); }
   .stud-core { fill: hsl(var(--brand-mint)); }
 
-  .hub-fill { fill: url(#hub-disc); }
+  .hub-fill { fill: hsl(var(--hub)); }
   .hub-ring { stroke: hsl(var(--brand-light) / 0.6); }
   .hub-edge { stroke: hsl(var(--brand-ink) / 0.55); }
   .hub-core { fill: hsl(var(--brand-teal)); }
   .hub-dot { fill: hsl(var(--brand-light)); }
 
-  .pointer-fill { fill: url(#pointer-metal); }
+  .pointer-fill { fill: hsl(var(--pointer)); }
   .pointer-edge { stroke: hsl(var(--brand-light) / 0.75); }
   .pointer-shade { fill: hsl(var(--brand-ink) / 0.18); }
 
@@ -182,9 +195,8 @@
   .grad-teal { stop-color: hsl(var(--brand-teal)); }
   .grad-blue { stop-color: hsl(var(--brand-blue)); }
   .grad-ink { stop-color: hsl(var(--brand-ink)); }
-  .grad-metal-hi { stop-color: hsl(var(--metal-hi)); }
-  .grad-metal-mid { stop-color: hsl(var(--metal-mid)); }
-  .grad-metal-low { stop-color: hsl(var(--metal-low)); }
+  .grad-rim-start { stop-color: hsl(var(--rim-start)); }
+  .grad-rim-end { stop-color: hsl(var(--rim-end)); }
 
   .stage-backdrop {
     position: absolute;
@@ -373,6 +385,38 @@
     backdrop-filter: blur(18px) saturate(1.1);
   }
 
+  /* Per-panel tint, swapped in for --brand-light so each glass card can carry
+     its own subtle hue without losing the dark-glass-over-stage look. */
+  .panel-glass.panel-glass--winner {
+    background:
+      linear-gradient(
+        160deg,
+        hsl(var(--tint-winner-panel) / 0.14) 0%,
+        hsl(var(--tint-winner-panel) / 0.04) 45%,
+        hsl(var(--brand-ink) / 0.4) 100%
+      );
+  }
+
+  .panel-glass.panel-glass--winners-rail {
+    background:
+      linear-gradient(
+        160deg,
+        hsl(var(--tint-winners-rail) / 0.14) 0%,
+        hsl(var(--tint-winners-rail) / 0.04) 45%,
+        hsl(var(--brand-ink) / 0.4) 100%
+      );
+  }
+
+  .panel-glass.panel-glass--control-bar {
+    background:
+      linear-gradient(
+        160deg,
+        hsl(var(--tint-control-bar) / 0.14) 0%,
+        hsl(var(--tint-control-bar) / 0.04) 45%,
+        hsl(var(--brand-ink) / 0.4) 100%
+      );
+  }
+
   .panel-rule {
     height: 1px;
     background: linear-gradient(
@@ -420,7 +464,7 @@
   }
 
   .live-dot {
-    box-shadow: 0 0 0 0 hsl(var(--brand-mint) / 0.7);
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0.7);
     animation: live-pulse 2.4s ease-out infinite;
   }
 
@@ -586,13 +630,13 @@
 
 @keyframes live-pulse {
   0% {
-    box-shadow: 0 0 0 0 hsl(var(--brand-mint) / 0.65);
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0.65);
   }
   70% {
-    box-shadow: 0 0 0 9px hsl(var(--brand-mint) / 0);
+    box-shadow: 0 0 0 9px hsl(var(--primary) / 0);
   }
   100% {
-    box-shadow: 0 0 0 0 hsl(var(--brand-mint) / 0);
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0);
   }
 }
 

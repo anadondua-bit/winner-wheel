@@ -45,6 +45,22 @@ export type Branding = {
   segmentColors: Array<string | null>;
   /** How many of the segment color slots actually get cycled across the wheel (2–10); fewer reads bolder/more graphic. */
   segmentColorCount: number;
+  /** The winning segment's fill and the label drawn on top of it. */
+  winnerFill: string | null;
+  winnerLabel: string | null;
+  /** The wheel's fixed chassis: rim gradient endpoints, hub and pointer. */
+  rimStart: string | null;
+  rimEnd: string | null;
+  hub: string | null;
+  pointer: string | null;
+  /** Canvas-wide text and accent colors. */
+  headerTitle: string | null;
+  stageText: string | null;
+  accentButtons: string | null;
+  /** Subtle background tints for the three glass panels. */
+  tintWinnerPanel: string | null;
+  tintWinnersRail: string | null;
+  tintControlBar: string | null;
 };
 
 export type WheelConfig = {

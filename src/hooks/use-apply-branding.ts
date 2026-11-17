@@ -11,11 +11,28 @@ const FONT_STACKS: Record<Exclude<FontChoice, "custom">, string> = {
 
 const CUSTOM_FONT_FAMILY = "BrandCustomFont";
 
-const BRAND_VARS: Array<[key: keyof Pick<Branding, "brandMint" | "brandTeal" | "brandCyan" | "brandBlue">, cssVar: string]> = [
+type HexField = {
+  [K in keyof Branding]: Branding[K] extends string | null ? K : never;
+}[keyof Branding];
+
+/** Every hex-or-null branding field and the CSS custom property it overrides. */
+const BRAND_VARS: Array<[key: HexField, cssVar: string]> = [
   ["brandMint", "--brand-mint"],
   ["brandTeal", "--brand-teal"],
   ["brandCyan", "--brand-cyan"],
   ["brandBlue", "--brand-blue"],
+  ["winnerFill", "--winner-fill"],
+  ["winnerLabel", "--winner-label"],
+  ["rimStart", "--rim-start"],
+  ["rimEnd", "--rim-end"],
+  ["hub", "--hub"],
+  ["pointer", "--pointer"],
+  ["headerTitle", "--text-header-title"],
+  ["stageText", "--brand-light"],
+  ["accentButtons", "--primary"],
+  ["tintWinnerPanel", "--tint-winner-panel"],
+  ["tintWinnersRail", "--tint-winners-rail"],
+  ["tintControlBar", "--tint-control-bar"],
 ];
 
 /**

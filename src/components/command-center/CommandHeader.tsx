@@ -45,7 +45,10 @@ export const CommandHeader = ({
         ) : null}
         <div className="min-w-0">
           <p className="text-kicker text-[11px] text-brand-light/45">Command center</p>
-          <h1 className="mt-1 truncate text-2xl font-extrabold tracking-tight text-brand-light sm:text-3xl">
+          <h1
+            className="mt-1 truncate text-2xl font-extrabold tracking-tight sm:text-3xl"
+            style={{ color: "hsl(var(--text-header-title))" }}
+          >
             {title}
           </h1>
           {subtitle ? <p className="mt-0.5 text-sm text-brand-light/45">{subtitle}</p> : null}

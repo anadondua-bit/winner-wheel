@@ -2,7 +2,7 @@ import { Image as ImageIcon, RotateCcw, Type as TypeIcon, Upload } from "lucide-
 import { useRef } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { accentDefaultHex, defaultSegmentHex } from "@/lib/wheel-palette";
+import { WHEEL_PART_DEFAULT_HEX, accentDefaultHex, defaultSegmentHex } from "@/lib/wheel-palette";
 import { MAX_BACKGROUND_BYTES, MAX_FONT_BYTES, MAX_LOGO_BYTES, readFileAsDataUrl } from "@/lib/wheel-upload";
 import type { AccentName, Branding, FontChoice } from "@/lib/wheel-types";
 
@@ -34,6 +34,70 @@ const BRAND_FIELDS: Array<{
   { key: "brandBlue", label: "Blue", getDefault: (d) => d.blue },
 ];
 
+type FixedColorKey = keyof typeof WHEEL_PART_DEFAULT_HEX;
+
+type FixedColorFieldSpec = { key: FixedColorKey; label: string; description?: string };
+
+const WINNER_SEGMENT_FIELDS: FixedColorFieldSpec[] = [
+  { key: "winnerFill", label: "Highlight fill" },
+  { key: "winnerLabel", label: "Highlight label" },
+];
+
+const CHASSIS_FIELDS: FixedColorFieldSpec[] = [
+  { key: "rimStart", label: "Rim start" },
+  { key: "rimEnd", label: "Rim end" },
+  { key: "hub", label: "Hub" },
+  { key: "pointer", label: "Pointer" },
+];
+
+const CANVAS_TEXT_FIELDS: FixedColorFieldSpec[] = [
+  { key: "headerTitle", label: "Header title", description: "The event name at the top left." },
+  { key: "stageText", label: "Stage text", description: "Labels, counters and the winner name." },
+  { key: "accentButtons", label: "Accent & buttons", description: "Start spin, live dot and highlights." },
+];
+
+const PANEL_TINT_FIELDS: FixedColorFieldSpec[] = [
+  { key: "tintWinnerPanel", label: "Winner panel", description: "The large result card." },
+  { key: "tintWinnersRail", label: "Winners rail", description: "The revealed names list." },
+  { key: "tintControlBar", label: "Control bar", description: "The operator strip along the bottom." },
+];
+
+type ColorPickerFieldProps = {
+  label: string;
+  description?: string;
+  value: string;
+  overridden: boolean;
+  onPick: (hex: string) => void;
+  onReset: () => void;
+};
+
+/** One labeled swatch with an optional description line and a reset-to-default action. */
+const ColorPickerField = ({ label, description, value, overridden, onPick, onReset }: ColorPickerFieldProps) => (
+  <div className="flex items-center gap-3 rounded-[0.7rem] border border-brand-light/12 px-3 py-2.5">
+    <input
+      type="color"
+      value={value}
+      onChange={(event) => onPick(event.target.value)}
+      className="h-8 w-8 shrink-0 cursor-pointer rounded border border-brand-light/20 bg-transparent p-0"
+      aria-label={label}
+    />
+    <div className="min-w-0 flex-1">
+      <p className="truncate text-[12px] font-semibold text-brand-light/80">{label}</p>
+      {description ? <p className="truncate text-[10.5px] text-brand-light/40">{description}</p> : null}
+    </div>
+    {overridden ? (
+      <button
+        type="button"
+        onClick={onReset}
+        title="Reset to default"
+        className="shrink-0 text-brand-light/30 hover:text-brand-light/70"
+      >
+        <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+      </button>
+    ) : null}
+  </div>
+);
+
 /** Logo, background, display font and every brand/segment color, each independently editable. */
 export const BrandingPanel = ({ branding, accent, onChange }: BrandingPanelProps) => {
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -42,6 +106,21 @@ export const BrandingPanel = ({ branding, accent, onChange }: BrandingPanelProps
 
   const accentDefaults = accentDefaultHex(accent);
   const segmentDefaults = defaultSegmentHex();
+
+  const renderFixedField = (field: FixedColorFieldSpec) => {
+    const override = branding[field.key];
+    return (
+      <ColorPickerField
+        key={field.key}
+        label={field.label}
+        description={field.description}
+        value={override ?? WHEEL_PART_DEFAULT_HEX[field.key]}
+        overridden={Boolean(override)}
+        onPick={(hex) => onChange({ ...branding, [field.key]: hex })}
+        onReset={() => onChange({ ...branding, [field.key]: null })}
+      />
+    );
+  };
 
   const withUploadError = async (task: () => Promise<void>) => {
     try {
@@ -268,6 +347,32 @@ export const BrandingPanel = ({ branding, accent, onChange }: BrandingPanelProps
               </div>
             );
           })}
+        </div>
+      </section>
+
+      <section className="grid gap-2">
+        <span className={fieldLabel}>Canvas elements</span>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {CANVAS_TEXT_FIELDS.map(renderFixedField)}
+        </div>
+
+        <span className={`${fieldLabel} mt-3`}>Panel tints</span>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {PANEL_TINT_FIELDS.map(renderFixedField)}
+        </div>
+      </section>
+
+      <section className="grid gap-2">
+        <span className={fieldLabel}>Winning segment</span>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {WINNER_SEGMENT_FIELDS.map(renderFixedField)}
+        </div>
+      </section>
+
+      <section className="grid gap-2">
+        <span className={fieldLabel}>Rim, hub &amp; pointer</span>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {CHASSIS_FIELDS.map(renderFixedField)}
         </div>
       </section>
 

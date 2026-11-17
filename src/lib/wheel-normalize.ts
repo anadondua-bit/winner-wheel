@@ -49,5 +49,17 @@ export const normalizeBranding = (value: unknown): Branding => {
       toHexOrNull(segmentColorsRaw[index]),
     ),
     segmentColorCount: clampInt(value.segmentColorCount, 2, SEGMENT_SLOT_COUNT, SEGMENT_SLOT_COUNT),
+    winnerFill: toHexOrNull(value.winnerFill),
+    winnerLabel: toHexOrNull(value.winnerLabel),
+    rimStart: toHexOrNull(value.rimStart),
+    rimEnd: toHexOrNull(value.rimEnd),
+    hub: toHexOrNull(value.hub),
+    pointer: toHexOrNull(value.pointer),
+    headerTitle: toHexOrNull(value.headerTitle),
+    stageText: toHexOrNull(value.stageText),
+    accentButtons: toHexOrNull(value.accentButtons),
+    tintWinnerPanel: toHexOrNull(value.tintWinnerPanel),
+    tintWinnersRail: toHexOrNull(value.tintWinnersRail),
+    tintControlBar: toHexOrNull(value.tintControlBar),
   };
 };

@@ -18,7 +18,7 @@ export const WinnersList = ({ winners, totalDraws }: WinnersListProps) => {
   const latestId = winners[winners.length - 1]?.companyId;
 
   return (
-    <section className="panel-glass flex min-h-[10vh] max-h-[31vh] flex-col overflow-hidden rounded-[1.4rem] px-[1.7vw] py-[1.8vh] max-lg:px-5">
+    <section className="panel-glass panel-glass--winners-rail flex min-h-[10vh] max-h-[31vh] flex-col overflow-hidden rounded-[1.4rem] px-[1.7vw] py-[1.8vh] max-lg:px-5">
       <header className="flex items-center justify-between gap-3 pb-[1.2vh]">
         <div className="flex items-baseline gap-[0.8vw]">
           <h2

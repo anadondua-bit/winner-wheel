@@ -47,7 +47,7 @@ export const WinnersLedger = ({ winners, totalDraws }: WinnersLedgerProps) => {
   };
 
   return (
-    <section className="panel-glass flex min-h-0 flex-1 flex-col rounded-[1.5rem] px-6 py-5">
+    <section className="panel-glass panel-glass--winners-rail flex min-h-0 flex-1 flex-col rounded-[1.5rem] px-6 py-5">
       <header className="flex items-center justify-between gap-3 pb-3">
         <div className="flex items-baseline gap-2">
           <h2 className="text-kicker text-[12px] text-brand-light/70">Winners</h2>

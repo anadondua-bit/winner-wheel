@@ -18,6 +18,18 @@ export const defaultBranding: Branding = {
   brandBlue: null,
   segmentColors: Array(SEGMENT_SLOT_COUNT).fill(null),
   segmentColorCount: SEGMENT_SLOT_COUNT,
+  winnerFill: null,
+  winnerLabel: null,
+  rimStart: null,
+  rimEnd: null,
+  hub: null,
+  pointer: null,
+  headerTitle: null,
+  stageText: null,
+  accentButtons: null,
+  tintWinnerPanel: null,
+  tintWinnersRail: null,
+  tintControlBar: null,
 };
 
 export const defaultConfig: WheelConfig = {

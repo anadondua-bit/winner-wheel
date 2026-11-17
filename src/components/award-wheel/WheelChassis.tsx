@@ -19,19 +19,8 @@ export const WheelChassis = ({ landedKey }: WheelChassisProps) => (
   <svg viewBox="0 0 1000 1000" className="h-full w-full">
     <defs>
       <linearGradient id="rim-band" x1="0.15" y1="0" x2="0.85" y2="1">
-        <stop offset="0%" className="grad-teal" />
-        <stop offset="46%" className="grad-blue" />
-        <stop offset="100%" className="grad-ink" />
-      </linearGradient>
-      <radialGradient id="hub-disc" cx="0.36" cy="0.28" r="0.85">
-        <stop offset="0%" className="grad-metal-hi" />
-        <stop offset="52%" className="grad-metal-mid" />
-        <stop offset="100%" className="grad-metal-low" />
-      </radialGradient>
-      <linearGradient id="pointer-metal" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" className="grad-metal-hi" />
-        <stop offset="55%" className="grad-mint" />
-        <stop offset="100%" className="grad-teal" />
+        <stop offset="0%" className="grad-rim-start" />
+        <stop offset="100%" className="grad-rim-end" />
       </linearGradient>
       <filter id="pointer-shadow" x="-60%" y="-40%" width="220%" height="220%">
         <feDropShadow dx="0" dy="8" stdDeviation="10" floodOpacity="0.65" />

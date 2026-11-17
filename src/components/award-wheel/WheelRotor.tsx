@@ -40,12 +40,6 @@ export const WheelRotor = ({ companies, phase, winnerIndex, segmentColorCount }:
 
   return (
     <svg viewBox="0 0 1000 1000" className="h-full w-full">
-      <defs>
-        <linearGradient id="winner-segment" x1="0.1" y1="0" x2="0.8" y2="1">
-          <stop offset="0%" className="grad-mint" />
-          <stop offset="100%" className="grad-teal" />
-        </linearGradient>
-      </defs>
 
       {companies.map((company, index) => {
         const isWinner = phase === "result" && index === winnerIndex;

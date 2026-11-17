@@ -37,7 +37,7 @@ export const DrawActionCard = ({
   const isResult = phase === "result" && winner;
 
   return (
-    <section className="panel-glass relative overflow-hidden rounded-[1.75rem] px-7 py-7 sm:px-9 sm:py-8">
+    <section className="panel-glass panel-glass--control-bar relative overflow-hidden rounded-[1.75rem] px-7 py-7 sm:px-9 sm:py-8">
       <span
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-light/40 to-transparent"
