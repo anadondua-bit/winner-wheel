@@ -48,7 +48,7 @@ export const playWheelTick = (intensity: number): void => {
   const osc = audio.createOscillator();
   osc.type = "triangle";
   osc.frequency.setValueAtTime(freq, now);
-  osc.frequency.exponentialRampToValueAtTime(Math.max(220, freq * 0.5), now + duration);
+  osc.frequency.exponentialRampToValueAtTime(Math.max(400, freq * 0.75), now + duration);
 
   const filter = audio.createBiquadFilter();
   filter.type = "highpass";
@@ -74,10 +74,12 @@ export type SpinHumHandle = {
 };
 
 /**
- * A continuous electric-motor hum under the ticks: two detuned sawtooths
- * through a resonant low-pass, both swept by speed so it spools up, holds
- * a synthy whine mid-spin, and winds down as the wheel decelerates —
- * reads as an electric drive, not a wooden ratchet.
+ * A continuous energetic hum under the ticks: two triangle waves a clean
+ * perfect fifth apart, bright register, gentle filter — swept by speed so
+ * it builds and settles with the spin. Deliberately avoids the classic
+ * horror-film trick (two near-unison low tones beating against each
+ * other) in favor of a consonant interval, so it reads as upbeat and
+ * futuristic rather than ominous.
  */
 export const startSpinHum = (): SpinHumHandle | null => {
   const audio = getContext();
@@ -86,21 +88,21 @@ export const startSpinHum = (): SpinHumHandle | null => {
   const now = audio.currentTime;
 
   const oscA = audio.createOscillator();
-  oscA.type = "sawtooth";
-  oscA.frequency.setValueAtTime(70, now);
+  oscA.type = "triangle";
+  oscA.frequency.setValueAtTime(220, now);
 
   const oscB = audio.createOscillator();
-  oscB.type = "sawtooth";
-  oscB.frequency.setValueAtTime(73, now);
+  oscB.type = "triangle";
+  oscB.frequency.setValueAtTime(330, now); // a perfect fifth above oscA
 
   const filter = audio.createBiquadFilter();
   filter.type = "lowpass";
-  filter.frequency.setValueAtTime(280, now);
-  filter.Q.value = 5;
+  filter.frequency.setValueAtTime(1400, now);
+  filter.Q.value = 0.7;
 
   const gain = audio.createGain();
   gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(0.1, now + 0.12);
+  gain.gain.exponentialRampToValueAtTime(0.09, now + 0.12);
 
   oscA.connect(filter);
   oscB.connect(filter);
@@ -116,11 +118,11 @@ export const startSpinHum = (): SpinHumHandle | null => {
     if (stopped) return;
     const clamped = Math.min(1, Math.max(0, intensity));
     const t = audio.currentTime;
-    const baseFreq = 64 + clamped * 190;
+    const baseFreq = 220 + clamped * 260;
     oscA.frequency.setTargetAtTime(baseFreq, t, 0.05);
-    oscB.frequency.setTargetAtTime(baseFreq * 1.045, t, 0.05);
-    filter.frequency.setTargetAtTime(260 + clamped * 2600, t, 0.06);
-    gain.gain.setTargetAtTime(0.05 + clamped * 0.09, t, 0.08);
+    oscB.frequency.setTargetAtTime(baseFreq * 1.5, t, 0.05); // keep the fifth locked at any speed
+    filter.frequency.setTargetAtTime(1200 + clamped * 3400, t, 0.06);
+    gain.gain.setTargetAtTime(0.045 + clamped * 0.075, t, 0.08);
   };
 
   const stop = () => {

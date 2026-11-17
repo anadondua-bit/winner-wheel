@@ -1,3 +1,5 @@
+import { Maximize } from "lucide-react";
+
 type StageHeaderProps = {
   title: string;
   subtitle: string;
@@ -5,6 +7,9 @@ type StageHeaderProps = {
   totalCompanies: number;
   /** Connection to the command center; omit when this page has no remote link. */
   signal?: "live" | "connecting" | "offline";
+  /** Hidden once the page is already fullscreen — omit entirely to never show it. */
+  isFullscreen?: boolean;
+  onEnterFullscreen?: () => void;
 };
 
 const SIGNAL_COPY: Record<NonNullable<StageHeaderProps["signal"]>, string> = {
@@ -20,6 +25,8 @@ export const StageHeader = ({
   companiesInPlay,
   totalCompanies,
   signal = "live",
+  isFullscreen,
+  onEnterFullscreen,
 }: StageHeaderProps) => (
   <header className="flex shrink-0 flex-wrap items-start justify-between gap-x-6 gap-y-3">
     <div className="min-w-0">
@@ -69,6 +76,18 @@ export const StageHeader = ({
           On the wheel
         </p>
       </div>
+
+      {!isFullscreen && onEnterFullscreen ? (
+        <button
+          type="button"
+          onClick={onEnterFullscreen}
+          title="Full screen (F)"
+          aria-label="Enter full screen"
+          className="grid h-[clamp(26px,3vh,40px)] w-[clamp(26px,3vh,40px)] shrink-0 place-items-center rounded-full border border-brand-light/15 bg-brand-ink/25 text-brand-light/70 backdrop-blur transition-colors hover:bg-brand-ink/50 hover:text-brand-light"
+        >
+          <Maximize className="h-[1.1em] w-[1.1em]" aria-hidden="true" />
+        </button>
+      ) : null}
     </div>
   </header>
 );

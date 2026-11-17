@@ -114,6 +114,8 @@ const Stage = () => {
             companiesInPlay={wheelCompanies.length}
             totalCompanies={wheel.baseRoster.length}
             signal={status}
+            isFullscreen={isFullscreen}
+            onEnterFullscreen={() => void toggleFullscreen()}
           />
 
           <main className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.03fr)_minmax(0,1fr)] items-stretch gap-[2.2vw] max-lg:grid-cols-1 max-lg:items-start max-lg:gap-5">
