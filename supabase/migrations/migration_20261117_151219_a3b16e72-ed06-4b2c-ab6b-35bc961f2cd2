@@ -1,0 +1,41 @@
+create table public.award_wheel_runs (
+  id uuid primary key default gen_random_uuid(),
+  stage_key text not null default 'main-stage',
+  event_title text not null default '',
+  event_subtitle text not null default '',
+  roster jsonb not null,
+  started_at timestamptz not null default now()
+);
+
+create index award_wheel_runs_latest_idx on public.award_wheel_runs (stage_key, started_at desc);
+
+alter table public.award_wheel_runs enable row level security;
+
+create policy "award wheel runs readable" on public.award_wheel_runs
+  for select to anon, authenticated using (true);
+
+create policy "award wheel runs appendable" on public.award_wheel_runs
+  for insert to anon, authenticated with check (true);
+
+create table public.award_wheel_winners (
+  id uuid primary key default gen_random_uuid(),
+  run_id uuid not null references public.award_wheel_runs(id),
+  company_id text not null,
+  company_name text not null,
+  short_name text not null,
+  draw_number integer not null check (draw_number between 1 and 60),
+  won_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  constraint award_wheel_winners_run_draw_key unique (run_id, draw_number),
+  constraint award_wheel_winners_run_company_key unique (run_id, company_id)
+);
+
+create index award_wheel_winners_run_idx on public.award_wheel_winners (run_id, draw_number);
+
+alter table public.award_wheel_winners enable row level security;
+
+create policy "award wheel winners readable" on public.award_wheel_winners
+  for select to anon, authenticated using (true);
+
+create policy "award wheel winners appendable" on public.award_wheel_winners
+  for insert to anon, authenticated with check (true);
