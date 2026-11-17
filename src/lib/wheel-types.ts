@@ -22,6 +22,29 @@ export type DrawPhase = "idle" | "spinning" | "result" | "complete";
 
 export type AccentName = "teal" | "blue" | "mint";
 
+export type FontChoice = "manrope" | "system-sans" | "system-serif" | "system-mono" | "custom";
+
+/**
+ * Everything the operator can brand. Images and fonts are stored as data
+ * URLs — there's no object storage wired up, so the show record (and the
+ * live broadcast to the stage) carries them inline. Null means "use the
+ * built-in default for this slot."
+ */
+export type Branding = {
+  logoDataUrl: string | null;
+  backgroundDataUrl: string | null;
+  font: FontChoice;
+  customFontDataUrl: string | null;
+  customFontName: string | null;
+  /** Hex overrides for the four brand hues; null keeps the accent preset's value. */
+  brandMint: string | null;
+  brandTeal: string | null;
+  brandCyan: string | null;
+  brandBlue: string | null;
+  /** Hex override per wheel segment slot (cycles across however many companies are on the wheel); null keeps the derived default. */
+  segmentColors: Array<string | null>;
+};
+
 export type WheelConfig = {
   title: string;
   subtitle: string;
@@ -32,6 +55,7 @@ export type WheelConfig = {
   /** Native LED wall pixels, used to frame the composition. */
   wallWidth: number;
   wallHeight: number;
+  branding: Branding;
 };
 
 export type DrawState = {

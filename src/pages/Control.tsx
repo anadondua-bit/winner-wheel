@@ -4,6 +4,7 @@ import { DrawActionCard } from "@/components/command-center/DrawActionCard";
 import { StatTile } from "@/components/command-center/StatTile";
 import { WinnersLedger } from "@/components/command-center/WinnersLedger";
 import { RosterDialog } from "@/components/award-wheel/RosterDialog";
+import { useApplyBranding } from "@/hooks/use-apply-branding";
 import { useAwardWheel } from "@/hooks/use-award-wheel";
 import { useDrawSync } from "@/hooks/use-draw-sync";
 import { useWheelBroadcast, type BroadcastStatus } from "@/hooks/use-wheel-broadcast";
@@ -17,6 +18,7 @@ import type { DrawState } from "@/lib/wheel-types";
  */
 const Control = () => {
   const wheel = useAwardWheel();
+  useApplyBranding(wheel.config.branding);
   const sync = useDrawSync({
     winners: wheel.winners,
     baseRoster: wheel.baseRoster,
@@ -70,6 +72,7 @@ const Control = () => {
         <CommandHeader
           title={wheel.config.title}
           subtitle={wheel.config.subtitle}
+          logoUrl={wheel.config.branding.logoDataUrl ?? undefined}
           broadcastStatus={broadcastStatus}
           saveStatus={sync.status}
           onOpenRoster={() => setRosterOpen(true)}

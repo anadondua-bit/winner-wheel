@@ -10,6 +10,7 @@ type StageHeaderProps = {
   /** Hidden once the page is already fullscreen — omit entirely to never show it. */
   isFullscreen?: boolean;
   onEnterFullscreen?: () => void;
+  logoUrl?: string;
 };
 
 const SIGNAL_COPY: Record<NonNullable<StageHeaderProps["signal"]>, string> = {
@@ -27,22 +28,33 @@ export const StageHeader = ({
   signal = "live",
   isFullscreen,
   onEnterFullscreen,
+  logoUrl,
 }: StageHeaderProps) => (
   <header className="flex shrink-0 flex-wrap items-start justify-between gap-x-6 gap-y-3">
-    <div className="min-w-0">
-      <div className="flex items-center gap-[0.7vw]">
-        <span
-          aria-hidden="true"
-          className="h-[3px] w-[clamp(18px,2vw,44px)] rounded-full bg-gradient-to-r from-brand-mint to-brand-cyan"
+    <div className="flex min-w-0 items-center gap-[0.9vw]">
+      {logoUrl ? (
+        <img
+          src={logoUrl}
+          alt=""
+          className="h-[clamp(26px,3.6vh,52px)] w-auto shrink-0 object-contain"
+          draggable={false}
         />
-        <span className="eyebrow truncate">{subtitle || "Live draw"}</span>
+      ) : null}
+      <div className="min-w-0">
+        <div className="flex items-center gap-[0.7vw]">
+          <span
+            aria-hidden="true"
+            className="h-[3px] w-[clamp(18px,2vw,44px)] rounded-full bg-gradient-to-r from-brand-mint to-brand-cyan"
+          />
+          <span className="eyebrow truncate">{subtitle || "Live draw"}</span>
+        </div>
+        <h1
+          className="mt-[0.7vh] truncate font-display font-extrabold uppercase text-brand-light/90"
+          style={{ fontSize: "clamp(13px, 1.42vw, 33px)", letterSpacing: "0.17em" }}
+        >
+          {title}
+        </h1>
       </div>
-      <h1
-        className="mt-[0.7vh] truncate font-display font-extrabold uppercase text-brand-light/90"
-        style={{ fontSize: "clamp(13px, 1.42vw, 33px)", letterSpacing: "0.17em" }}
-      >
-        {title}
-      </h1>
     </div>
 
     <div className="flex items-center gap-[1.4vw] max-lg:gap-5">

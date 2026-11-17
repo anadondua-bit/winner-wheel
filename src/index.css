@@ -42,6 +42,10 @@
 
     --radius: 0.9rem;
 
+    /* Defaults; use-apply-branding overrides these when the operator picks a font */
+    --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+    --font-display: "Manrope", ui-sans-serif, system-ui, sans-serif;
+
     /* Brand palette carried from the supplied artwork */
     --brand-mint: 166 68% 58%;
     --brand-teal: 168 60% 36%;

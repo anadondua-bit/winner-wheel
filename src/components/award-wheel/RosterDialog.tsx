@@ -1,5 +1,6 @@
-import { AlertTriangle, Lock, RotateCcw } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, Lock, RotateCcw, Upload } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,9 +22,16 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { formatRoster, parseRoster, sampleRoster } from "@/lib/wheel-roster";
-import type { AccentName, Company, WheelConfig } from "@/lib/wheel-types";
+import { BrandingPanel } from "./BrandingPanel";
+import {
+  formatRoster,
+  normalizeUploadedRoster,
+  parseRoster,
+  sampleRoster,
+} from "@/lib/wheel-roster";
+import type { AccentName, Branding, Company, WheelConfig } from "@/lib/wheel-types";
 
 type RosterDialogProps = {
   open: boolean;
@@ -47,7 +55,7 @@ const accents: Array<{ id: AccentName; label: string; swatch: string }> = [
 
 const parseSize = (value: string): number => Number(value.replace(/[^0-9]/g, ""));
 
-/** Operator settings: the list, the titles and the guarded rehearsal reset. */
+/** Operator settings: titles, accent and wall size, the roster, and every brand asset. */
 export const RosterDialog = ({
   open,
   onOpenChange,
@@ -65,6 +73,8 @@ export const RosterDialog = ({
   const [wallWidth, setWallWidth] = useState(String(config.wallWidth));
   const [wallHeight, setWallHeight] = useState(String(config.wallHeight));
   const [rosterText, setRosterText] = useState(() => formatRoster(roster));
+  const [branding, setBranding] = useState<Branding>(config.branding);
+  const rosterFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -74,6 +84,7 @@ export const RosterDialog = ({
     setWallWidth(String(config.wallWidth));
     setWallHeight(String(config.wallHeight));
     setRosterText(formatRoster(roster));
+    setBranding(config.branding);
   }, [open, config, roster]);
 
   const parsed = useMemo(() => parseRoster(rosterText), [rosterText]);
@@ -84,7 +95,18 @@ export const RosterDialog = ({
   const width = parseSize(wallWidth);
   const height = parseSize(wallHeight);
   const wallOk = width >= 320 && width <= 7680 && height >= 200 && height <= 4320;
-  const canApply = !rosterLocked && parsed.problems.length === 0 && wallOk;
+  // The roster itself stays locked mid-show (applyRoster no-ops while winners
+  // exist) but titles, accent, wall size and every brand asset are cosmetic
+  // and safe to change live, so only a genuinely broken roster blocks Apply.
+  const canApply = (rosterLocked || parsed.problems.length === 0) && wallOk;
+
+  const handleRosterFile = (file: File | undefined) => {
+    if (!file) return;
+    void file
+      .text()
+      .then((text) => setRosterText(normalizeUploadedRoster(text)))
+      .catch(() => toast.error(`Could not read "${file.name}"`));
+  };
 
   const apply = () => {
     if (!canApply) return;
@@ -94,6 +116,7 @@ export const RosterDialog = ({
       accent,
       wallWidth: width,
       wallHeight: height,
+      branding,
     });
     onApplyRoster(parsed.companies);
     onOpenChange(false);
@@ -107,8 +130,8 @@ export const RosterDialog = ({
             Roster &amp; branding
           </DialogTitle>
           <DialogDescription className="text-[clamp(11px,0.8vw,14px)] text-brand-light/50">
-            One company per line as <span className="text-brand-light/80">Full Name | SHORT</span>.
-            Short names are what appears on the wheel; full names appear on the reveal.
+            Everything the audience sees that isn't the draw itself: titles, the company list and
+            every brand asset.
           </DialogDescription>
         </DialogHeader>
 
@@ -157,132 +180,170 @@ export const RosterDialog = ({
           </div>
         )}
 
-        <div className="mt-6 grid gap-5 md:grid-cols-2">
-          <div className="grid gap-2">
-            <Label htmlFor="event-title" className={fieldLabel}>
-              Event title
-            </Label>
-            <Input
-              id="event-title"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              className="h-11 border-brand-light/15 bg-brand-ink/50 text-brand-light"
-              placeholder="Global Innovation Awards"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="event-subtitle" className={fieldLabel}>
-              Stage line
-            </Label>
-            <Input
-              id="event-subtitle"
-              value={subtitle}
-              onChange={(event) => setSubtitle(event.target.value)}
-              className="h-11 border-brand-light/15 bg-brand-ink/50 text-brand-light"
-              placeholder="Main Stage · Companies of the Year"
-            />
-          </div>
-        </div>
+        <Tabs defaultValue="event" className="mt-6">
+          <TabsList>
+            <TabsTrigger value="event">Event</TabsTrigger>
+            <TabsTrigger value="roster">Roster</TabsTrigger>
+            <TabsTrigger value="branding">Branding</TabsTrigger>
+          </TabsList>
 
-        <div className="mt-5 grid gap-5 md:grid-cols-2">
-          <div className="grid gap-2">
-            <span className={fieldLabel}>Accent</span>
-            <div className="flex gap-2" role="group" aria-label="Conference accent">
-              {accents.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setAccent(option.id)}
-                  aria-pressed={accent === option.id}
-                  className={`flex-1 rounded-[0.7rem] border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] transition-colors ${
-                    accent === option.id
-                      ? "border-brand-mint/60 bg-brand-light/10 text-brand-light"
-                      : "border-brand-light/12 text-brand-light/45 hover:bg-brand-light/5"
-                  }`}
-                >
-                  <span
-                    className="mb-1.5 block h-1.5 w-full rounded-full"
-                    style={{ background: option.swatch }}
+          <TabsContent value="event" className="mt-5 grid gap-5">
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="event-title" className={fieldLabel}>
+                  Event title
+                </Label>
+                <Input
+                  id="event-title"
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  className="h-11 border-brand-light/15 bg-brand-ink/50 text-brand-light"
+                  placeholder="Global Innovation Awards"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="event-subtitle" className={fieldLabel}>
+                  Stage line
+                </Label>
+                <Input
+                  id="event-subtitle"
+                  value={subtitle}
+                  onChange={(event) => setSubtitle(event.target.value)}
+                  className="h-11 border-brand-light/15 bg-brand-ink/50 text-brand-light"
+                  placeholder="Main Stage · Companies of the Year"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="grid gap-2">
+                <span className={fieldLabel}>Accent</span>
+                <div className="flex gap-2" role="group" aria-label="Conference accent">
+                  {accents.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setAccent(option.id)}
+                      aria-pressed={accent === option.id}
+                      className={`flex-1 rounded-[0.7rem] border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] transition-colors ${
+                        accent === option.id
+                          ? "border-brand-mint/60 bg-brand-light/10 text-brand-light"
+                          : "border-brand-light/12 text-brand-light/45 hover:bg-brand-light/5"
+                      }`}
+                    >
+                      <span
+                        className="mb-1.5 block h-1.5 w-full rounded-full"
+                        style={{ background: option.swatch }}
+                      />
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <span className={fieldLabel}>LED wall pixels</span>
+                <div className="flex items-center gap-2">
+                  <Input
+                    inputMode="numeric"
+                    aria-label="Wall width in pixels"
+                    value={wallWidth}
+                    onChange={(event) => setWallWidth(event.target.value)}
+                    className="h-11 border-brand-light/15 bg-brand-ink/50 text-brand-light"
                   />
-                  {option.label}
-                </button>
-              ))}
+                  <span className="text-brand-light/30">×</span>
+                  <Input
+                    inputMode="numeric"
+                    aria-label="Wall height in pixels"
+                    value={wallHeight}
+                    onChange={(event) => setWallHeight(event.target.value)}
+                    className="h-11 border-brand-light/15 bg-brand-ink/50 text-brand-light"
+                  />
+                  <span className="text-[11px] text-brand-light/40">px</span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-brand-light/35">
+                  {wallOk
+                    ? `Frame at ${width} × ${height}. The stage is composed for this ratio and fills the wall exactly at this size.`
+                    : "Use a wall size between 320 × 200 and 7680 × 4320."}
+                </p>
+              </div>
             </div>
-          </div>
+          </TabsContent>
 
-          <div className="grid gap-2">
-            <span className={fieldLabel}>LED wall pixels</span>
-            <div className="flex items-center gap-2">
-              <Input
-                inputMode="numeric"
-                aria-label="Wall width in pixels"
-                value={wallWidth}
-                onChange={(event) => setWallWidth(event.target.value)}
-                className="h-11 border-brand-light/15 bg-brand-ink/50 text-brand-light"
-              />
-              <span className="text-brand-light/30">×</span>
-              <Input
-                inputMode="numeric"
-                aria-label="Wall height in pixels"
-                value={wallHeight}
-                onChange={(event) => setWallHeight(event.target.value)}
-                className="h-11 border-brand-light/15 bg-brand-ink/50 text-brand-light"
-              />
-              <span className="text-[11px] text-brand-light/40">px</span>
-            </div>
-            <p className="text-[11px] leading-relaxed text-brand-light/35">
-              {wallOk
-                ? `Frame at ${width} × ${height}. The stage is composed for this ratio and fills the wall exactly at this size.`
-                : "Use a wall size between 320 × 200 and 7680 × 4320."}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <Label htmlFor="roster" className={fieldLabel}>
-              Company list
-            </Label>
-            <div className="flex items-center gap-2">
-              {isSample && (
-                <span className="rounded-full border border-brand-cyan/30 bg-brand-cyan/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-light/60">
-                  Placeholder roster
+          <TabsContent value="roster" className="mt-5 grid gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Label htmlFor="roster" className={fieldLabel}>
+                Company list
+              </Label>
+              <div className="flex items-center gap-2">
+                {isSample && (
+                  <span className="rounded-full border border-brand-cyan/30 bg-brand-cyan/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-light/60">
+                    Placeholder roster
+                  </span>
+                )}
+                <span className="tabular text-[11px] text-brand-light/40">
+                  {parsed.companies.length} companies
                 </span>
-              )}
-              <span className="tabular text-[11px] text-brand-light/40">
-                {parsed.companies.length} companies
-              </span>
+                <Button
+                  type="button"
+                  variant="quiet"
+                  size="sm"
+                  className="h-7 rounded-full px-3 text-[11px]"
+                  onClick={() => rosterFileRef.current?.click()}
+                  disabled={rosterLocked}
+                >
+                  <Upload className="mr-1.5 h-3 w-3" aria-hidden="true" />
+                  Upload file
+                </Button>
+                <input
+                  ref={rosterFileRef}
+                  type="file"
+                  accept=".csv,.txt,text/csv,text/plain"
+                  className="hidden"
+                  onChange={(event) => handleRosterFile(event.target.files?.[0])}
+                />
+              </div>
             </div>
-          </div>
-          <Textarea
-            id="roster"
-            spellCheck={false}
-            value={rosterText}
-            onChange={(event) => setRosterText(event.target.value)}
-            className="min-h-[clamp(180px,30vh,320px)] resize-y border-brand-light/15 bg-brand-ink/50 font-mono text-[13px] leading-6 text-brand-light/90"
-          />
-        </div>
+            <Textarea
+              id="roster"
+              spellCheck={false}
+              value={rosterText}
+              onChange={(event) => setRosterText(event.target.value)}
+              disabled={rosterLocked}
+              className="min-h-[clamp(180px,30vh,320px)] resize-y border-brand-light/15 bg-brand-ink/50 font-mono text-[13px] leading-6 text-brand-light/90 disabled:opacity-50"
+            />
+            <p className="text-[11px] leading-relaxed text-brand-light/35">
+              One company per line as <span className="text-brand-light/70">Full Name | SHORT</span>.
+              Short names are what appears on the wheel; full names appear on the reveal. A
+              CSV upload's first comma is treated the same way.
+            </p>
 
-        {(parsed.problems.length > 0 || parsed.warnings.length > 0) && (
-          <div className="mt-3 space-y-1.5">
-            {parsed.problems.map((problem) => (
-              <p key={problem} className="flex items-start gap-2 text-[12px] text-destructive">
-                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                {problem}
-              </p>
-            ))}
-            {parsed.warnings.slice(0, 3).map((warning) => (
-              <p key={warning} className="flex items-start gap-2 text-[12px] text-brand-light/50">
-                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-cyan" aria-hidden="true" />
-                {warning}
-              </p>
-            ))}
-          </div>
-        )}
+            {!rosterLocked && (parsed.problems.length > 0 || parsed.warnings.length > 0) && (
+              <div className="mt-1 space-y-1.5">
+                {parsed.problems.map((problem) => (
+                  <p key={problem} className="flex items-start gap-2 text-[12px] text-destructive">
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    {problem}
+                  </p>
+                ))}
+                {parsed.warnings.slice(0, 3).map((warning) => (
+                  <p key={warning} className="flex items-start gap-2 text-[12px] text-brand-light/50">
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-cyan" aria-hidden="true" />
+                    {warning}
+                  </p>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="branding" className="mt-5">
+            <BrandingPanel branding={branding} accent={accent} onChange={setBranding} />
+          </TabsContent>
+        </Tabs>
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-brand-light/10 pt-5">
           <p className="max-w-[46ch] text-[11px] leading-relaxed text-brand-light/35">
-            Roster changes apply to the next draw. Saved winners are never re-drawn.
+            Changes apply to the next draw. Saved winners are never re-drawn.
           </p>
           <div className="flex items-center gap-2">
             <Button

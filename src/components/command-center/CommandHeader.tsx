@@ -6,6 +6,7 @@ import type { BroadcastStatus } from "@/hooks/use-wheel-broadcast";
 type CommandHeaderProps = {
   title: string;
   subtitle: string;
+  logoUrl?: string;
   broadcastStatus: BroadcastStatus;
   saveStatus: SaveStatus;
   onOpenRoster: () => void;
@@ -28,6 +29,7 @@ const SAVE_COPY: Record<SaveStatus, { label: string; tone: string }> = {
 export const CommandHeader = ({
   title,
   subtitle,
+  logoUrl,
   broadcastStatus,
   saveStatus,
   onOpenRoster,
@@ -37,12 +39,17 @@ export const CommandHeader = ({
 
   return (
     <header className="flex flex-wrap items-center justify-between gap-4">
-      <div className="min-w-0">
-        <p className="text-kicker text-[11px] text-brand-light/45">Command center</p>
-        <h1 className="mt-1 truncate text-2xl font-extrabold tracking-tight text-brand-light sm:text-3xl">
-          {title}
-        </h1>
-        {subtitle ? <p className="mt-0.5 text-sm text-brand-light/45">{subtitle}</p> : null}
+      <div className="flex min-w-0 items-center gap-3">
+        {logoUrl ? (
+          <img src={logoUrl} alt="" className="h-9 w-auto shrink-0 object-contain" draggable={false} />
+        ) : null}
+        <div className="min-w-0">
+          <p className="text-kicker text-[11px] text-brand-light/45">Command center</p>
+          <h1 className="mt-1 truncate text-2xl font-extrabold tracking-tight text-brand-light sm:text-3xl">
+            {title}
+          </h1>
+          {subtitle ? <p className="mt-0.5 text-sm text-brand-light/45">{subtitle}</p> : null}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

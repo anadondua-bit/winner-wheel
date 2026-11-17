@@ -1,11 +1,18 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
-import type { Company, Winner } from "./wheel-types";
+import { defaultBranding, SEGMENT_SLOT_COUNT } from "./wheel-roster";
+import type { Branding, Company, FontChoice, Winner } from "./wheel-types";
 
 /**
  * Durable show record. Runs and winners are append-only: a reset starts a new
  * run instead of deleting history, and every result is written before the
  * reveal is advanced.
+ *
+ * There's no object storage wired up for this project, so uploaded branding
+ * (logo, background, custom font) rides along as data URLs inside the same
+ * `roster` jsonb column the company list already used — no schema change.
+ * The column holds `{ companies, branding }` now instead of a bare array;
+ * `parseRosterPayload` still reads old rows that are just the bare array.
  */
 const STAGE_KEY = "main-stage";
 
@@ -17,21 +24,63 @@ export type RemoteDraw = {
   wallWidth: number;
   wallHeight: number;
   roster: Company[];
+  branding: Branding;
   winners: Winner[];
   startedAt: string;
 };
 
-const parseRoster = (value: Json): Company[] => {
+const isRecord = (value: unknown): value is Record<string, Json | undefined> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const parseCompanies = (value: Json | undefined): Company[] => {
   if (!Array.isArray(value)) return [];
   return value.flatMap((entry) => {
-    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return [];
-    const record = entry as Record<string, Json | undefined>;
-    const { id, name, short } = record;
-    if (typeof id !== "string" || typeof name !== "string" || typeof short !== "string") {
-      return [];
-    }
+    if (!isRecord(entry)) return [];
+    const { id, name, short } = entry;
+    if (typeof id !== "string" || typeof name !== "string" || typeof short !== "string") return [];
     return [{ id, name, short }];
   });
+};
+
+const isHex = (value: unknown): value is string =>
+  typeof value === "string" && /^#?[0-9a-fA-F]{6}$/.test(value);
+
+const toHexOrNull = (value: unknown): string | null => (isHex(value) ? value : null);
+
+const toFont = (value: unknown): FontChoice =>
+  value === "system-sans" || value === "system-serif" || value === "system-mono" || value === "custom"
+    ? value
+    : "manrope";
+
+const parseBranding = (value: Json | undefined): Branding => {
+  if (!isRecord(value)) return defaultBranding;
+  const segmentColorsRaw = Array.isArray(value.segmentColors) ? value.segmentColors : [];
+
+  return {
+    logoDataUrl: typeof value.logoDataUrl === "string" ? value.logoDataUrl : null,
+    backgroundDataUrl: typeof value.backgroundDataUrl === "string" ? value.backgroundDataUrl : null,
+    font: toFont(value.font),
+    customFontDataUrl: typeof value.customFontDataUrl === "string" ? value.customFontDataUrl : null,
+    customFontName: typeof value.customFontName === "string" ? value.customFontName : null,
+    brandMint: toHexOrNull(value.brandMint),
+    brandTeal: toHexOrNull(value.brandTeal),
+    brandCyan: toHexOrNull(value.brandCyan),
+    brandBlue: toHexOrNull(value.brandBlue),
+    segmentColors: Array.from({ length: SEGMENT_SLOT_COUNT }, (_, index) =>
+      toHexOrNull(segmentColorsRaw[index]),
+    ),
+  };
+};
+
+const parseRosterPayload = (value: Json): { companies: Company[]; branding: Branding } => {
+  if (Array.isArray(value)) {
+    // Legacy shape, from before branding existed: a bare company array.
+    return { companies: parseCompanies(value), branding: defaultBranding };
+  }
+  if (isRecord(value)) {
+    return { companies: parseCompanies(value.companies), branding: parseBranding(value.branding) };
+  }
+  return { companies: [], branding: defaultBranding };
 };
 
 export const fetchLatestDraw = async (): Promise<RemoteDraw | null> => {
@@ -56,6 +105,8 @@ export const fetchLatestDraw = async (): Promise<RemoteDraw | null> => {
 
   if (winnersError) throw winnersError;
 
+  const { companies, branding } = parseRosterPayload(run.roster);
+
   return {
     runId: run.id,
     title: run.event_title,
@@ -63,7 +114,8 @@ export const fetchLatestDraw = async (): Promise<RemoteDraw | null> => {
     accent: run.accent,
     wallWidth: run.wall_width,
     wallHeight: run.wall_height,
-    roster: parseRoster(run.roster),
+    roster: companies,
+    branding,
     startedAt: run.started_at,
     winners: (rows ?? []).map((row) => ({
       companyId: row.company_id,
@@ -82,6 +134,7 @@ export const createDrawRun = async (draw: {
   wallWidth: number;
   wallHeight: number;
   roster: Company[];
+  branding: Branding;
 }): Promise<string> => {
   const { data, error } = await supabase
     .from("award_wheel_runs")
@@ -92,7 +145,7 @@ export const createDrawRun = async (draw: {
       accent: draw.accent,
       wall_width: draw.wallWidth,
       wall_height: draw.wallHeight,
-      roster: draw.roster as unknown as Json,
+      roster: { companies: draw.roster, branding: draw.branding } as unknown as Json,
     })
     .select("id")
     .single();

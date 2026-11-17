@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { deriveWheelView } from "@/lib/wheel-derive";
 import { SPIN_DURATION_MS } from "@/lib/wheel-geometry";
-import { STORAGE_KEY, createInitialState } from "@/lib/wheel-roster";
+import { SEGMENT_SLOT_COUNT, STORAGE_KEY, createInitialState, defaultBranding } from "@/lib/wheel-roster";
 import type {
   AccentName,
+  Branding,
   Company,
   DrawPhase,
   DrawState,
+  FontChoice,
   WheelConfig,
   Winner,
 } from "@/lib/wheel-types";
@@ -22,6 +24,36 @@ const clampInt = (value: unknown, min: number, max: number, fallback: number): n
 
 const toAccent = (value: unknown): AccentName =>
   value === "blue" || value === "mint" ? value : "teal";
+
+const isHex = (value: unknown): value is string =>
+  typeof value === "string" && /^#?[0-9a-fA-F]{6}$/.test(value);
+
+const toHexOrNull = (value: unknown): string | null => (isHex(value) ? value : null);
+
+const toFont = (value: unknown): FontChoice =>
+  value === "system-sans" || value === "system-serif" || value === "system-mono" || value === "custom"
+    ? value
+    : "manrope";
+
+const toBranding = (value: unknown): Branding => {
+  if (!isRecord(value)) return defaultBranding;
+  const segmentColorsRaw = Array.isArray(value.segmentColors) ? value.segmentColors : [];
+
+  return {
+    logoDataUrl: typeof value.logoDataUrl === "string" ? value.logoDataUrl : null,
+    backgroundDataUrl: typeof value.backgroundDataUrl === "string" ? value.backgroundDataUrl : null,
+    font: toFont(value.font),
+    customFontDataUrl: typeof value.customFontDataUrl === "string" ? value.customFontDataUrl : null,
+    customFontName: typeof value.customFontName === "string" ? value.customFontName : null,
+    brandMint: toHexOrNull(value.brandMint),
+    brandTeal: toHexOrNull(value.brandTeal),
+    brandCyan: toHexOrNull(value.brandCyan),
+    brandBlue: toHexOrNull(value.brandBlue),
+    segmentColors: Array.from({ length: SEGMENT_SLOT_COUNT }, (_, index) =>
+      toHexOrNull(segmentColorsRaw[index]),
+    ),
+  };
+};
 
 const toCompany = (value: unknown): Company | null => {
   if (!isRecord(value)) return null;
@@ -95,6 +127,7 @@ const normalizeState = (raw: unknown): DrawState => {
       accent: toAccent(config.accent),
       wallWidth: clampInt(config.wallWidth, 320, 7680, fallback.config.wallWidth),
       wallHeight: clampInt(config.wallHeight, 200, 4320, fallback.config.wallHeight),
+      branding: toBranding(config.branding),
     },
     baseRoster,
     winners,
@@ -146,6 +179,7 @@ export type AwardWheelApi = {
     accent: AccentName;
     wallWidth: number;
     wallHeight: number;
+    branding: Branding;
   }) => void;
 };
 
@@ -242,6 +276,7 @@ export const useAwardWheel = (): AwardWheelApi => {
       accent: AccentName;
       wallWidth: number;
       wallHeight: number;
+      branding: Branding;
     }) => {
       const current = stateRef.current;
       if (draw.roster.length < current.config.totalDraws) return;
@@ -268,6 +303,7 @@ export const useAwardWheel = (): AwardWheelApi => {
           accent: toAccent(draw.accent),
           wallWidth: clampInt(draw.wallWidth, 320, 7680, current.config.wallWidth),
           wallHeight: clampInt(draw.wallHeight, 200, 4320, current.config.wallHeight),
+          branding: draw.branding,
         },
         baseRoster: draw.roster,
         winners,

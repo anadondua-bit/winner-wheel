@@ -5,6 +5,7 @@ import { StageBackdrop } from "@/components/award-wheel/StageBackdrop";
 import { StageHeader } from "@/components/award-wheel/StageHeader";
 import { WinnerPanel } from "@/components/award-wheel/WinnerPanel";
 import { WinnersList } from "@/components/award-wheel/WinnersList";
+import { useApplyBranding } from "@/hooks/use-apply-branding";
 import { useWheelMirror } from "@/hooks/use-wheel-mirror";
 import { isWheelAudioReady, resumeWheelAudio } from "@/lib/wheel-sound";
 
@@ -27,6 +28,8 @@ const Stage = () => {
     winnerIndex,
     status,
   } = wheel;
+
+  useApplyBranding(config.branding);
 
   const toggleFullscreen = useCallback(async () => {
     try {
@@ -86,7 +89,7 @@ const Stage = () => {
       className="relative h-full w-full overflow-hidden bg-background"
       data-accent={config.accent}
     >
-      <StageBackdrop />
+      <StageBackdrop imageUrl={config.branding.backgroundDataUrl ?? undefined} />
 
       {!audioArmed ? (
         <button
@@ -116,6 +119,7 @@ const Stage = () => {
             signal={status}
             isFullscreen={isFullscreen}
             onEnterFullscreen={() => void toggleFullscreen()}
+            logoUrl={config.branding.logoDataUrl ?? undefined}
           />
 
           <main className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.03fr)_minmax(0,1fr)] items-stretch gap-[2.2vw] max-lg:grid-cols-1 max-lg:items-start max-lg:gap-5">

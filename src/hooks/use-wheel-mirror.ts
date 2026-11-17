@@ -40,6 +40,7 @@ export const useWheelMirror = () => {
             accent: toAccent(remote.accent),
             wallWidth: remote.wallWidth || fallback.config.wallWidth,
             wallHeight: remote.wallHeight || fallback.config.wallHeight,
+            branding: remote.branding,
           },
           baseRoster: remote.roster.length ? remote.roster : fallback.baseRoster,
           winners,

@@ -20,8 +20,8 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				sans: ['Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-				display: ['Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif']
+				sans: ['var(--font-sans)', 'Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+				display: ['var(--font-display)', 'Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif']
 			},
 			colors: {
 				border: 'hsl(var(--border))',

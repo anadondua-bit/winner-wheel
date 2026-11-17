@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { appendWinners, createDrawRun, fetchLatestDraw } from "@/lib/wheel-cloud";
 import type {
   AccentName,
+  Branding,
   Company,
   SaveStatus,
   WheelConfig,
@@ -45,6 +46,7 @@ export type RemoteAdoption = {
   accent: AccentName;
   wallWidth: number;
   wallHeight: number;
+  branding: Branding;
 };
 
 type Params = {
@@ -112,6 +114,7 @@ export const useDrawSync = ({
                 : "teal",
             wallWidth: remote.wallWidth,
             wallHeight: remote.wallHeight,
+            branding: remote.branding,
             roster:
               remote.roster.length >= configRef.current.totalDraws
                 ? remote.roster
@@ -168,6 +171,7 @@ export const useDrawSync = ({
             accent: configRef.current.accent,
             wallWidth: configRef.current.wallWidth,
             wallHeight: configRef.current.wallHeight,
+            branding: configRef.current.branding,
             roster: rosterRef.current,
           });
           runIdRef.current = runId;

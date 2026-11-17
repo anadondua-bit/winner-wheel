@@ -1,8 +1,22 @@
-import type { Company, DrawState, RosterParseResult, WheelConfig } from "./wheel-types";
+import type { Branding, Company, DrawState, RosterParseResult, WheelConfig } from "./wheel-types";
 
 export const TOTAL_DRAWS = 15;
 export const STORAGE_KEY = "award-wheel.draw.v1";
 export const SHORT_NAME_LIMIT = 13;
+export const SEGMENT_SLOT_COUNT = 10;
+
+export const defaultBranding: Branding = {
+  logoDataUrl: null,
+  backgroundDataUrl: null,
+  font: "manrope",
+  customFontDataUrl: null,
+  customFontName: null,
+  brandMint: null,
+  brandTeal: null,
+  brandCyan: null,
+  brandBlue: null,
+  segmentColors: Array(SEGMENT_SLOT_COUNT).fill(null),
+};
 
 export const defaultConfig: WheelConfig = {
   title: "Global Innovation Awards",
@@ -11,6 +25,7 @@ export const defaultConfig: WheelConfig = {
   accent: "teal",
   wallWidth: 2304,
   wallHeight: 1280,
+  branding: defaultBranding,
 };
 
 /**
@@ -100,6 +115,23 @@ export const shortenName = (name: string): string =>
     .filter(Boolean)[0]
     ?.toUpperCase()
     .slice(0, SHORT_NAME_LIMIT) ?? "COMPANY";
+
+/**
+ * Normalizes an uploaded .csv/.txt file into the same "Name | SHORT" lines
+ * the textarea already accepts, so parseRoster stays the single source of
+ * truth for validation. A line that already uses |, ; or tab is left alone;
+ * a plain CSV line ("Name,SHORT" or just "Name") gets its first comma
+ * turned into the same separator.
+ */
+export const normalizeUploadedRoster = (text: string): string =>
+  text
+    .split(/\r?\n/)
+    .map((line) => {
+      const trimmed = line.trim();
+      if (!trimmed || /[|;\t]/.test(trimmed)) return trimmed;
+      return trimmed.replace(",", " | ");
+    })
+    .join("\n");
 
 /** Parses the operator's pasted roster and reports what blocks the draw. */
 export const parseRoster = (text: string): RosterParseResult => {
