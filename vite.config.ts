@@ -14,6 +14,9 @@ export default defineConfig(({ mode }) => {
     server: {
       host: "::",
       port: 8080,
+      // Allows the dev server to be reached through a tunnel (e.g. cloudflared)
+      // whose hostname doesn't match localhost; fine for local/dev use only.
+      allowedHosts: true,
     },
     plugins: plugins.filter(Boolean) as PluginOption[],
     resolve: {
