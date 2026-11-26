@@ -46,11 +46,14 @@ export const WHEEL_PART_DEFAULT_HEX = {
   hub: "#CFDCDD",
   headerTitle: "#EEF2F2",
   statusText: "#EEF2F2",
+  statusFillColor: "#0A121440", // brand-ink at the pill's current fixed 0.25 opacity
+  statusOutlineColor: "#EEF2F226", // brand-light at the pill's current fixed 0.15 opacity
+  statusDotColor: "#31B496", // representative only — the real default tracks the signal (live/connecting/offline)
   winnerPanelText: "#EEF2F2",
   stageText: "#EEF2F2",
   accentButtons: "#31B496",
   tintWinnerPanel: "#EAF4F2",
-  tintControlBar: "#E6F2F1",
+  tintWinnerPanelEnd: "#0A121466", // brand-ink at the gradient's current fixed 0.4 opacity
   // Fine chassis detail — each currently tracks a brand token (mint/ink/light/
   // teal) at a fixed opacity; these defaults are that token's value under the
   // default "teal" accent, purely for the picker's initial swatch. The real

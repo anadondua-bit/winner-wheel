@@ -98,6 +98,11 @@ const ControlDemo = () => {
         onApplyRoster={wheel.applyRoster}
         onUpdateConfig={wheel.updateConfig}
         onResetDraw={handleResetDraw}
+        winners={wheel.winners}
+        phase={wheel.phase}
+        wheelCompanies={wheel.wheelCompanies}
+        pendingWinner={wheel.pendingWinner}
+        winnerIndex={wheel.winnerIndex}
       />
     </div>
   );

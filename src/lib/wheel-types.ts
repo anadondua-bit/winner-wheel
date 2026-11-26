@@ -62,6 +62,28 @@ export type Branding = {
   revealedCounterFont: FontChoice | null;
   /** The company short names drawn on the wheel segments. */
   wheelLabelFont: FontChoice | null;
+  /** The footer's left-hand caption: "Main stage · live", "Revealed {time}", "Further spins disabled". */
+  footerCaptionFont: FontChoice | null;
+  /** The big line under the eyebrow: "{n} companies", "All {n} winners announced", "Let the draw begin", "Ready for the next name". */
+  bodyHeadlineFont: FontChoice | null;
+  /** The smaller line under that headline. */
+  bodySubtextFont: FontChoice | null;
+  /**
+   * Per-component color overrides for the winner-panel parts above. Null
+   * falls back to winnerPanelText, then stageText, then brand-light — same
+   * chain the fallback text already uses. The status pill and the reveal
+   * eyebrow have their own default hue (mint) when neither this nor the
+   * fallback chain has been set; everywhere else the default is exactly
+   * what winnerPanelText already resolves to.
+   */
+  winnerStatusColor: string | null;
+  winnerEyebrowColor: string | null;
+  winnerNameColor: string | null;
+  drawCounterColor: string | null;
+  revealedCounterColor: string | null;
+  footerCaptionColor: string | null;
+  bodyHeadlineColor: string | null;
+  bodySubtextColor: string | null;
   /**
    * Custom wording for every fixed stage label; null keeps the built-in
    * word. Only the constant parts are editable — a winner's name and a
@@ -89,6 +111,24 @@ export type Branding = {
   drawCounterLabel: string | null;
   /** Suffix after the numbers in the footer's revealed counter. */
   revealedCounterLabel: string | null;
+  /** Template with `{time}`, the formatted reveal time. */
+  footerCaptionRevealedLabel: string | null;
+  footerCaptionCompleteLabel: string | null;
+  /** Shown whenever there's no winner yet and the draw isn't finished (idle or spinning). */
+  footerCaptionLiveLabel: string | null;
+  /** Template with `{n}`, how many companies are still on the wheel for this draw. */
+  bodyHeadlineSpinningLabel: string | null;
+  /** Template with `{n}`, the total number of draws. */
+  bodyHeadlineCompleteLabel: string | null;
+  bodyHeadlineFirstLabel: string | null;
+  bodyHeadlineNextLabel: string | null;
+  bodySubtextSpinningLabel: string | null;
+  /** Template with `{n}`, how many companies are still on the wheel. */
+  bodySubtextCompleteLabel: string | null;
+  /** Template with `{n}` (companies on the wheel) and `{m}` (total draws). */
+  bodySubtextFirstLabel: string | null;
+  /** Template with `{n}` (companies still in play) and `{m}` (reveals left). */
+  bodySubtextNextLabel: string | null;
   /** Hex overrides for the four brand hues; null keeps the accent preset's value. */
   brandMint: string | null;
   brandTeal: string | null;
@@ -127,14 +167,27 @@ export type Branding = {
   headerTitle: string | null;
   /** The "Live" status pill, top left. */
   statusText: string | null;
+  /** The pill's own background — an #RRGGBBAA; null keeps the built-in dark fill at 0.25 opacity. */
+  statusFillColor: string | null;
+  /** Shows/hides that background entirely, independent of its color. */
+  statusFillEnabled: boolean;
+  /** The pill's own edge — an #RRGGBBAA; null keeps the built-in light outline at 0.15 opacity. */
+  statusOutlineColor: string | null;
+  /** Shows/hides that edge entirely, independent of its color. */
+  statusOutlineEnabled: boolean;
+  /** The small dot inside the pill; null keeps the signal's own color (live=accent, connecting=cyan, offline=red). */
+  statusDotColor: string | null;
   /** Every text inside the winner/result card: status, draw counter, winner name, subtext. */
   winnerPanelText: string | null;
   /** Fallback color for any stage text above that hasn't been given its own color. Never affects the command center's own UI. */
   stageText: string | null;
   accentButtons: string | null;
-  /** Subtle background tints for the glass panels that still exist (Winner panel is the only one on Stage; Control bar is Control-only). */
+  /** Subtle background tint for the Winner panel — the only glass panel still on stage, so the only one left editable. */
   tintWinnerPanel: string | null;
-  tintControlBar: string | null;
+  /** The color the Winner panel's gradient fades into at the bottom; null keeps the built-in dark fade. */
+  tintWinnerPanelEnd: string | null;
+  /** Opacity (0–1) of the Winner panel's own edge/border; null keeps the built-in 0.14. */
+  winnerPanelBorderOpacity: number | null;
 };
 
 /**

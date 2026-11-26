@@ -22,6 +22,17 @@ const BRANDING_SCALAR_KEYS = [
   "drawCounterFont",
   "revealedCounterFont",
   "wheelLabelFont",
+  "footerCaptionFont",
+  "bodyHeadlineFont",
+  "bodySubtextFont",
+  "winnerStatusColor",
+  "winnerEyebrowColor",
+  "winnerNameColor",
+  "drawCounterColor",
+  "revealedCounterColor",
+  "footerCaptionColor",
+  "bodyHeadlineColor",
+  "bodySubtextColor",
   "statusLiveLabel",
   "statusConnectingLabel",
   "statusOfflineLabel",
@@ -38,6 +49,17 @@ const BRANDING_SCALAR_KEYS = [
   "eyebrowDrawOfLabel",
   "drawCounterLabel",
   "revealedCounterLabel",
+  "footerCaptionRevealedLabel",
+  "footerCaptionCompleteLabel",
+  "footerCaptionLiveLabel",
+  "bodyHeadlineSpinningLabel",
+  "bodyHeadlineCompleteLabel",
+  "bodyHeadlineFirstLabel",
+  "bodyHeadlineNextLabel",
+  "bodySubtextSpinningLabel",
+  "bodySubtextCompleteLabel",
+  "bodySubtextFirstLabel",
+  "bodySubtextNextLabel",
   "brandMint",
   "brandTeal",
   "brandCyan",
@@ -65,11 +87,14 @@ const BRANDING_SCALAR_KEYS = [
   "labelHalo",
   "headerTitle",
   "statusText",
+  "statusFillColor",
+  "statusOutlineColor",
+  "statusDotColor",
   "winnerPanelText",
   "stageText",
   "accentButtons",
   "tintWinnerPanel",
-  "tintControlBar",
+  "tintWinnerPanelEnd",
 ] as const;
 
 const LAYOUT_SCALAR_KEYS = [
@@ -93,6 +118,12 @@ export const configToSettingsCsv = (config: WheelConfig): string => {
     rows.push([`branding.${key}`, config.branding[key] ?? ""]);
   });
   rows.push(["branding.segmentColorCount", String(config.branding.segmentColorCount)]);
+  rows.push([
+    "branding.winnerPanelBorderOpacity",
+    config.branding.winnerPanelBorderOpacity === null ? "" : String(config.branding.winnerPanelBorderOpacity),
+  ]);
+  rows.push(["branding.statusFillEnabled", String(config.branding.statusFillEnabled)]);
+  rows.push(["branding.statusOutlineEnabled", String(config.branding.statusOutlineEnabled)]);
   config.branding.segmentColors.forEach((hex, index) => {
     rows.push([`branding.segmentColors.${index + 1}`, hex ?? ""]);
   });
@@ -123,6 +154,12 @@ export const settingsCsvToConfigPatch = (text: string): Partial<Omit<WheelConfig
     (_, index) => map.get(`branding.segmentColors.${index + 1}`) || null,
   );
   brandingRecord.segmentColorCount = map.get("branding.segmentColorCount");
+  const winnerPanelBorderOpacity = map.get("branding.winnerPanelBorderOpacity");
+  if (winnerPanelBorderOpacity) brandingRecord.winnerPanelBorderOpacity = winnerPanelBorderOpacity;
+  const statusFillEnabled = map.get("branding.statusFillEnabled");
+  if (statusFillEnabled) brandingRecord.statusFillEnabled = statusFillEnabled;
+  const statusOutlineEnabled = map.get("branding.statusOutlineEnabled");
+  if (statusOutlineEnabled) brandingRecord.statusOutlineEnabled = statusOutlineEnabled;
 
   const layoutRecord: Record<string, unknown> = {};
   LAYOUT_SCALAR_KEYS.forEach((key) => {

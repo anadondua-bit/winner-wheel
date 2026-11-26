@@ -30,6 +30,21 @@ export const isRgbaHexColor = (value: unknown): value is string =>
 export const toRgbaHexOrNull = (value: unknown): string | null =>
   isRgbaHexColor(value) ? value : null;
 
+/** A 0–1 opacity override; anything out of range or non-numeric stays null ("use the built-in default"). */
+export const toOpacityOrNull = (value: unknown): number | null => {
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1) return null;
+  return Math.round(parsed * 100) / 100;
+};
+
+/** A real on/off toggle (not nullable — "unset" just means the fallback). Accepts the CSV's "true"/"false" strings too. */
+export const toBool = (value: unknown, fallback: boolean): boolean => {
+  if (typeof value === "boolean") return value;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return fallback;
+};
+
 /** A custom label override: trimmed, length-capped, empty string treated as "not set". */
 export const toTextOrNull = (value: unknown): string | null => {
   if (typeof value !== "string") return null;
@@ -74,6 +89,17 @@ export const normalizeBranding = (value: unknown): Branding => {
     drawCounterFont: toFontChoiceOrNull(value.drawCounterFont),
     revealedCounterFont: toFontChoiceOrNull(value.revealedCounterFont),
     wheelLabelFont: toFontChoiceOrNull(value.wheelLabelFont),
+    footerCaptionFont: toFontChoiceOrNull(value.footerCaptionFont),
+    bodyHeadlineFont: toFontChoiceOrNull(value.bodyHeadlineFont),
+    bodySubtextFont: toFontChoiceOrNull(value.bodySubtextFont),
+    winnerStatusColor: toHexOrNull(value.winnerStatusColor),
+    winnerEyebrowColor: toHexOrNull(value.winnerEyebrowColor),
+    winnerNameColor: toHexOrNull(value.winnerNameColor),
+    drawCounterColor: toHexOrNull(value.drawCounterColor),
+    revealedCounterColor: toHexOrNull(value.revealedCounterColor),
+    footerCaptionColor: toHexOrNull(value.footerCaptionColor),
+    bodyHeadlineColor: toHexOrNull(value.bodyHeadlineColor),
+    bodySubtextColor: toHexOrNull(value.bodySubtextColor),
     statusLiveLabel: toTextOrNull(value.statusLiveLabel),
     statusConnectingLabel: toTextOrNull(value.statusConnectingLabel),
     statusOfflineLabel: toTextOrNull(value.statusOfflineLabel),
@@ -90,6 +116,17 @@ export const normalizeBranding = (value: unknown): Branding => {
     eyebrowDrawOfLabel: toTextOrNull(value.eyebrowDrawOfLabel),
     drawCounterLabel: toTextOrNull(value.drawCounterLabel),
     revealedCounterLabel: toTextOrNull(value.revealedCounterLabel),
+    footerCaptionRevealedLabel: toTextOrNull(value.footerCaptionRevealedLabel),
+    footerCaptionCompleteLabel: toTextOrNull(value.footerCaptionCompleteLabel),
+    footerCaptionLiveLabel: toTextOrNull(value.footerCaptionLiveLabel),
+    bodyHeadlineSpinningLabel: toTextOrNull(value.bodyHeadlineSpinningLabel),
+    bodyHeadlineCompleteLabel: toTextOrNull(value.bodyHeadlineCompleteLabel),
+    bodyHeadlineFirstLabel: toTextOrNull(value.bodyHeadlineFirstLabel),
+    bodyHeadlineNextLabel: toTextOrNull(value.bodyHeadlineNextLabel),
+    bodySubtextSpinningLabel: toTextOrNull(value.bodySubtextSpinningLabel),
+    bodySubtextCompleteLabel: toTextOrNull(value.bodySubtextCompleteLabel),
+    bodySubtextFirstLabel: toTextOrNull(value.bodySubtextFirstLabel),
+    bodySubtextNextLabel: toTextOrNull(value.bodySubtextNextLabel),
     brandMint: toHexOrNull(value.brandMint),
     brandTeal: toHexOrNull(value.brandTeal),
     brandCyan: toHexOrNull(value.brandCyan),
@@ -119,11 +156,17 @@ export const normalizeBranding = (value: unknown): Branding => {
     labelHalo: toHexOrNull(value.labelHalo),
     headerTitle: toHexOrNull(value.headerTitle),
     statusText: toHexOrNull(value.statusText),
+    statusFillColor: toRgbaHexOrNull(value.statusFillColor),
+    statusFillEnabled: toBool(value.statusFillEnabled, true),
+    statusOutlineColor: toRgbaHexOrNull(value.statusOutlineColor),
+    statusOutlineEnabled: toBool(value.statusOutlineEnabled, true),
+    statusDotColor: toHexOrNull(value.statusDotColor),
     winnerPanelText: toHexOrNull(value.winnerPanelText),
     stageText: toHexOrNull(value.stageText),
     accentButtons: toHexOrNull(value.accentButtons),
     tintWinnerPanel: toRgbaHexOrNull(value.tintWinnerPanel),
-    tintControlBar: toRgbaHexOrNull(value.tintControlBar),
+    tintWinnerPanelEnd: toRgbaHexOrNull(value.tintWinnerPanelEnd),
+    winnerPanelBorderOpacity: toOpacityOrNull(value.winnerPanelBorderOpacity),
   };
 };
 

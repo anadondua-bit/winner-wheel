@@ -84,9 +84,23 @@
     --tint-winner-panel: 168 31% 94%; /* #EAF4F2 */
     --tint-winner-panel-a1: 0.14;
     --tint-winner-panel-a2: 0.04;
-    --tint-control-bar: 175 32% 93%; /* #E6F2F1 */
-    --tint-control-bar-a1: 0.14;
-    --tint-control-bar-a2: 0.04;
+    /* The gradient's bottom stop — a real editable color+alpha, not a multiplier
+       like the pair above. Default reproduces the old fixed brand-ink/0.4 fade. */
+    --tint-winner-panel-end: 196 32% 6%; /* #0A1214 */
+    --tint-winner-panel-end-a: 0.4;
+
+    /* The Winner panel's own edge/border opacity — every other glass panel keeps
+       the shared .panel-glass border below; this one is independently editable. */
+    --winner-panel-border-opacity: 0.14;
+
+    /* The Live indicator pill's own fill and outline — real editable color+alpha,
+       like the gradient-end pair above, not a multiplier. --status-dot has no
+       default here since it tracks the signal (live/connecting/offline) instead;
+       StageHeader supplies that fallback inline. */
+    --status-fill: 196 32% 6%; /* #0A1214, brand-ink */
+    --status-fill-a: 0.25;
+    --status-outline: 180 14% 94%; /* #EEF2F2, brand-light */
+    --status-outline-a: 0.15;
 
     --stage-shadow: 0 40px 120px -40px hsl(var(--primary) / 0.55);
 
@@ -396,8 +410,9 @@
         160deg,
         hsl(var(--tint-winner-panel) / var(--tint-winner-panel-a1)) 0%,
         hsl(var(--tint-winner-panel) / var(--tint-winner-panel-a2)) 45%,
-        hsl(var(--brand-ink) / 0.4) 100%
+        hsl(var(--tint-winner-panel-end) / var(--tint-winner-panel-end-a)) 100%
       );
+    border-color: hsl(var(--brand-light) / var(--winner-panel-border-opacity));
   }
 
   /* Fixed tint, not operator-editable: this box only ever exists in the command
@@ -412,12 +427,13 @@
       );
   }
 
+  /* Fixed tint, not operator-editable: command-center chrome only, never shown on stage. */
   .panel-glass.panel-glass--control-bar {
     background:
       linear-gradient(
         160deg,
-        hsl(var(--tint-control-bar) / var(--tint-control-bar-a1)) 0%,
-        hsl(var(--tint-control-bar) / var(--tint-control-bar-a2)) 45%,
+        hsl(175 32% 93% / 0.14) 0%,
+        hsl(175 32% 93% / 0.04) 45%,
         hsl(var(--brand-ink) / 0.4) 100%
       );
   }

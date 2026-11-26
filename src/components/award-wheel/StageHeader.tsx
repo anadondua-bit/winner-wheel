@@ -39,13 +39,20 @@ export const StageHeader = ({
   <header className="flex shrink-0 flex-wrap items-start justify-between gap-x-6 gap-y-3">
     <div className="flex min-w-0 items-center gap-[1.4vw] max-lg:gap-5">
       <div
-        className="flex items-center gap-[0.6vw] rounded-full border border-brand-light/15 bg-brand-ink/25 px-[1.2vw] backdrop-blur"
-        style={{ height: "calc(var(--scale-status, 1) * clamp(30px, 4.14vh, 60px))" }}
+        className="flex items-center gap-[0.6vw] rounded-full border px-[1.2vw] backdrop-blur"
+        style={{
+          height: "calc(var(--scale-status, 1) * clamp(30px, 4.14vh, 60px))",
+          backgroundColor: "hsl(var(--status-fill) / var(--status-fill-a))",
+          borderColor: "hsl(var(--status-outline) / var(--status-outline-a))",
+        }}
       >
         <span
-          className={`h-[0.5em] w-[0.5em] rounded-full ${
-            signal === "live" ? "live-dot bg-primary" : signal === "connecting" ? "bg-brand-cyan" : "bg-destructive"
-          }`}
+          className={`h-[0.5em] w-[0.5em] rounded-full ${signal === "live" ? "live-dot" : ""}`}
+          style={{
+            backgroundColor: `hsl(var(--status-dot, ${
+              signal === "live" ? "var(--primary)" : signal === "connecting" ? "var(--brand-cyan)" : "var(--destructive)"
+            }))`,
+          }}
           aria-hidden="true"
         />
         <span

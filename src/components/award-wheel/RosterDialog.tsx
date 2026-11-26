@@ -1,6 +1,8 @@
-import { AlertTriangle, Download, Lock, RotateCcw, Upload } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, Download, Eye, EyeOff, Lock, RotateCcw, Upload } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { toast } from "sonner";
+import { StagePreview } from "@/components/command-center/StagePreview";
+import { brandingCssVars } from "@/hooks/use-apply-branding";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,7 +38,7 @@ import {
 } from "@/lib/wheel-roster";
 import type { RosterRowDraft } from "@/lib/wheel-roster";
 import { configToSettingsCsv, settingsCsvToConfigPatch } from "@/lib/wheel-settings-csv";
-import type { AccentName, Branding, Company, Layout, WheelConfig } from "@/lib/wheel-types";
+import type { AccentName, Branding, Company, DrawPhase, Layout, WheelConfig, Winner } from "@/lib/wheel-types";
 
 type RosterDialogProps = {
   open: boolean;
@@ -48,6 +50,12 @@ type RosterDialogProps = {
   onApplyRoster: (companies: Company[]) => void;
   onUpdateConfig: (patch: Partial<Omit<WheelConfig, "totalDraws">>) => void;
   onResetDraw: () => void;
+  /** The live draw's own state, straight from the same hook Control itself reads — for the optional stage preview below. */
+  winners: Winner[];
+  phase: DrawPhase;
+  wheelCompanies: Company[];
+  pendingWinner: Winner | null;
+  winnerIndex: number;
 };
 
 const fieldLabel = "text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-light/45";
@@ -81,6 +89,11 @@ export const RosterDialog = ({
   onApplyRoster,
   onUpdateConfig,
   onResetDraw,
+  winners,
+  phase,
+  wheelCompanies,
+  pendingWinner,
+  winnerIndex,
 }: RosterDialogProps) => {
   const [title, setTitle] = useState(config.title);
   const [subtitle, setSubtitle] = useState(config.subtitle);
@@ -90,6 +103,8 @@ export const RosterDialog = ({
   const [rows, setRows] = useState<RosterRowDraft[]>(() => companiesToRows(roster));
   const [branding, setBranding] = useState<Branding>(config.branding);
   const [layout, setLayout] = useState<Layout>(config.layout);
+  const [activeTab, setActiveTab] = useState("event");
+  const [showPreview, setShowPreview] = useState(false);
   const rosterFileRef = useRef<HTMLInputElement>(null);
   const settingsFileRef = useRef<HTMLInputElement>(null);
 
@@ -116,6 +131,18 @@ export const RosterDialog = ({
   const width = parseSize(wallWidth);
   const height = parseSize(wallHeight);
   const wallOk = width >= 320 && width <= 7680 && height >= 200 && height <= 4320;
+  // Unsaved edits, live — the same shape apply() sends to onUpdateConfig, so the
+  // preview shows exactly what Apply would produce, before you've clicked it.
+  const previewConfig: WheelConfig = {
+    ...config,
+    title: title.trim() || config.title,
+    subtitle: subtitle.trim(),
+    accent,
+    wallWidth: width,
+    wallHeight: height,
+    branding,
+    layout,
+  };
   // The roster itself stays locked mid-show (applyRoster no-ops while winners
   // exist) but titles, accent, wall size and every brand asset are cosmetic
   // and safe to change live, so only a genuinely broken roster blocks Apply.
@@ -187,12 +214,19 @@ export const RosterDialog = ({
       layout,
     });
     onApplyRoster(parsed.companies);
-    onOpenChange(false);
+    // Branding is iterative — tweak a color, see it land on stage, tweak again — so
+    // Apply there shouldn't bounce the operator out of the dialog each time.
+    if (activeTab === "branding") {
+      toast.success("Branding applied");
+    } else {
+      onOpenChange(false);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92dvh] w-[min(96vw,980px)] max-w-none gap-0 overflow-y-auto rounded-[1.4rem] border-brand-light/15 bg-card/95 p-[clamp(16px,2.4vw,40px)] text-foreground shadow-2xl backdrop-blur-2xl">
+      <DialogContent className="flex max-h-[92dvh] w-[min(96vw,980px)] max-w-none flex-col gap-0 overflow-hidden rounded-[1.4rem] border-brand-light/15 bg-card/95 p-0 text-foreground shadow-2xl backdrop-blur-2xl">
+        <div className="min-h-0 flex-1 overflow-y-auto p-[clamp(16px,2.4vw,40px)]">
         <DialogHeader className="gap-1">
           <div className="flex flex-wrap items-start justify-between gap-3 pr-8">
             <div>
@@ -282,7 +316,7 @@ export const RosterDialog = ({
           </div>
         )}
 
-        <Tabs defaultValue="event" className="mt-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
           <TabsList>
             <TabsTrigger value="event">Event</TabsTrigger>
             <TabsTrigger value="roster">Roster</TabsTrigger>
@@ -456,27 +490,62 @@ export const RosterDialog = ({
             <LayoutPanel layout={layout} onChange={setLayout} />
           </TabsContent>
         </Tabs>
+        </div>
 
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-brand-light/10 pt-5">
-          <p className="max-w-[46ch] text-[11px] leading-relaxed text-brand-light/35">
-            Changes apply to the next draw. Saved winners are never re-drawn.
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="stage"
-              className="rounded-full"
-              onClick={() => onOpenChange(false)}
+        <div className="flex shrink-0 flex-col gap-3 border-t border-brand-light/10 bg-card/95 px-[clamp(16px,2.4vw,40px)] py-4 backdrop-blur-2xl">
+          {showPreview ? (
+            // Scoped to just this subtree, via inline custom properties — never
+            // touches :root, so unsaved edits preview live without the real
+            // applied look (elsewhere in this same document) flickering too.
+            <div
+              className="mx-auto w-full max-w-[380px]"
+              style={brandingCssVars(branding) as CSSProperties}
             >
-              Cancel
-            </Button>
-            <Button
-              variant="hero"
-              className="rounded-full px-6"
-              onClick={apply}
-              disabled={!canApply}
-            >
-              Apply
-            </Button>
+              <StagePreview
+                config={previewConfig}
+                winners={winners}
+                phase={phase}
+                wheelCompanies={wheelCompanies}
+                pendingWinner={pendingWinner}
+                winnerIndex={winnerIndex}
+              />
+            </div>
+          ) : null}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="max-w-[46ch] text-[11px] leading-relaxed text-brand-light/35">
+              Changes apply to the next draw. Saved winners are never re-drawn.
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="quiet"
+                size="sm"
+                className="h-9 rounded-full px-3 text-[11px]"
+                onClick={() => setShowPreview((value) => !value)}
+              >
+                {showPreview ? (
+                  <EyeOff className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                ) : (
+                  <Eye className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                )}
+                {showPreview ? "Hide preview" : "Show preview"}
+              </Button>
+              <Button
+                variant="stage"
+                className="rounded-full"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="hero"
+                className="rounded-full px-6"
+                onClick={apply}
+                disabled={!canApply}
+              >
+                Apply
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>

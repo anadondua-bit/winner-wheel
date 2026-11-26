@@ -14,9 +14,9 @@ type WinnerPanelProps = {
 
 const pad = (value: number) => String(value).padStart(2, "0");
 
-/** Fills a "Draw {n} of {m}" style template with the actual numbers. */
-const fillTemplate = (template: string, n: string, m: string) =>
-  template.replace("{n}", n).replace("{m}", m);
+/** Fills a template like "Draw {n} of {m}" or "Revealed {time}" from a key/value map. */
+const fillTemplate = (template: string, vars: Record<string, string>): string =>
+  Object.entries(vars).reduce((text, [key, value]) => text.replace(`{${key}}`, value), template);
 
 const formatTime = (iso: string) => {
   const date = new Date(iso);
@@ -27,22 +27,64 @@ const formatTime = (iso: string) => {
 const phaseDot = (tone: "live" | "idle" | "done") =>
   tone === "live" ? "live-dot" : tone === "done" ? "opacity-80" : "opacity-60";
 
+const FALLBACK_TEXT = "var(--winner-panel-text, var(--stage-text, var(--brand-light)))";
+
 /** This panel's own text color, independently brandable from everything else on stage. */
 const panelText = (opacity?: number): { color: string } => ({
-  color: `hsl(var(--winner-panel-text, var(--stage-text, var(--brand-light)))${
-    opacity === undefined ? "" : ` / ${opacity}`
-  })`,
+  color: `hsl(${FALLBACK_TEXT}${opacity === undefined ? "" : ` / ${opacity}`})`,
+});
+
+/**
+ * One named text segment's own color (status pill, eyebrow, winner name, draw
+ * counter, revealed counter) — checks that segment's override first, then
+ * falls back to a given default (its own hue for the pill/eyebrow, or the
+ * shared winner-panel-text chain for everything else), at a given opacity.
+ */
+const segmentColor = (cssVar: string, fallback: string, opacity?: number): { color: string } => ({
+  color: `hsl(var(${cssVar}, ${fallback})${opacity === undefined ? "" : ` / ${opacity}`})`,
 });
 
 /** This element's own font, independently brandable; falls back to whatever its ancestor resolved to. */
 const fontVar = (cssVar: string): { fontFamily: string } => ({ fontFamily: `var(${cssVar}, inherit)` });
 
+/** Same idea as segmentColor, but for a border — text and outline can default to different hues/alphas, same override. */
+const segmentBorderColor = (cssVar: string, fallback: string, opacity: number): { borderColor: string } => ({
+  borderColor: `hsl(var(${cssVar}, ${fallback}) / ${opacity})`,
+});
+
+/** A thin accent line's own left-to-right fade, from this segment's color (override or default) to transparent. */
+const accentLineBg = (cssVar: string, fallback: string): { background: string } => ({
+  background: `linear-gradient(to right, hsl(var(${cssVar}, ${fallback})), transparent)`,
+});
+
+const STATUS_TONE_DEFAULTS = {
+  live: {
+    textFallback: "var(--brand-mint)",
+    textOpacity: undefined,
+    borderFallback: "var(--brand-mint)",
+    borderOpacity: 0.45,
+  },
+  idle: {
+    textFallback: FALLBACK_TEXT,
+    textOpacity: 0.7,
+    borderFallback: FALLBACK_TEXT,
+    borderOpacity: 0.2,
+  },
+  done: {
+    textFallback: FALLBACK_TEXT,
+    textOpacity: 0.85,
+    borderFallback: "var(--brand-blue)",
+    borderOpacity: 0.5,
+  },
+} as const;
+
 const StatusPill = ({ tone, label }: { tone: "live" | "idle" | "done"; label: string }) => {
   const tones = {
-    live: "border-brand-mint/45 bg-brand-mint/12 text-brand-mint",
-    idle: "border-brand-light/20 bg-brand-light/5 text-brand-light/70",
-    done: "border-brand-blue/50 bg-brand-blue/15 text-brand-light/85",
+    live: "bg-brand-mint/12",
+    idle: "bg-brand-light/5",
+    done: "bg-brand-blue/15",
   } as const;
+  const toneDefault = STATUS_TONE_DEFAULTS[tone];
 
   return (
     <span
@@ -50,6 +92,8 @@ const StatusPill = ({ tone, label }: { tone: "live" | "idle" | "done"; label: st
       style={{
         fontSize: "clamp(9px, 0.62vw, 15px)",
         letterSpacing: "0.24em",
+        ...segmentColor("--winner-status-color", toneDefault.textFallback, toneDefault.textOpacity),
+        ...segmentBorderColor("--winner-status-color", toneDefault.borderFallback, toneDefault.borderOpacity),
         ...fontVar("--font-winner-status"),
       }}
     >
@@ -104,85 +148,149 @@ export const WinnerPanel = ({
           style={{
             fontSize: "clamp(10px, 0.78vw, 18px)",
             letterSpacing: "0.18em",
-            ...panelText(0.55),
+            ...segmentColor("--draw-counter-color", FALLBACK_TEXT, 0.55),
             ...fontVar("--font-draw-counter"),
           }}
         >
           {branding?.drawCounterLabel || "DRAW"} {pad(drawNo)}{" "}
-          <span style={panelText(0.25)}>/</span> {pad(totalDraws)}
+          <span style={segmentColor("--draw-counter-color", FALLBACK_TEXT, 0.25)}>/</span> {pad(totalDraws)}
         </span>
       </header>
 
       <div key={`${phase}-${winner?.companyId ?? "none"}`} className="flex flex-col justify-center py-[2.2vh]">
         {isResult && winner ? (
           <div className="reveal-enter">
-            <div className="mb-[1.4vh] h-[2px] w-[4.4vw] min-w-[46px] bg-gradient-to-r from-brand-mint to-transparent" />
-            <span className="eyebrow text-brand-mint/90" style={fontVar("--font-winner-eyebrow")}>
+            <div
+              className="mb-[1.4vh] h-[2px] w-[4.4vw] min-w-[46px]"
+              style={accentLineBg("--winner-eyebrow-color", "var(--brand-mint)")}
+            />
+            <span
+              className="eyebrow"
+              style={{ ...segmentColor("--winner-eyebrow-color", "var(--brand-mint)", 0.9), ...fontVar("--font-winner-eyebrow") }}
+            >
               {branding?.eyebrowWinnerDrawLabel || "Winner · draw"} {pad(winner.draw)}
             </span>
             <h1
               className={`display-name name-stamp mt-[1.1vh] break-words ${
                 winner.name.length > 22 ? "winner-name--long" : "winner-name"
               }`}
-              style={{ ...panelText(), ...fontVar("--font-winner-name") }}
+              style={{ ...segmentColor("--winner-name-color", FALLBACK_TEXT), ...fontVar("--font-winner-name") }}
             >
               {winner.name}
             </h1>
           </div>
         ) : isSpinning ? (
           <div className="reveal-enter">
-            <span className="eyebrow" style={{ ...panelText(0.62), ...fontVar("--font-winner-eyebrow") }}>
+            <span
+              className="eyebrow"
+              style={{ ...segmentColor("--winner-eyebrow-color", FALLBACK_TEXT, 0.62), ...fontVar("--font-winner-eyebrow") }}
+            >
               {winnersCount === 1
                 ? branding?.eyebrowTurningLabel || "The wheel is turning"
                 : branding?.eyebrowInProgressLabel || "Draw in progress"}
             </span>
             <p
               className="display-name mt-[1.2vh]"
-              style={{ fontSize: "clamp(1.6rem, 3.4vw, 4.6rem)", ...panelText() }}
+              style={{
+                fontSize: "clamp(1.6rem, 3.4vw, 4.6rem)",
+                ...segmentColor("--body-headline-color", FALLBACK_TEXT),
+                ...fontVar("--font-body-headline"),
+              }}
             >
-              {companiesInPlay} companies
+              {fillTemplate(branding?.bodyHeadlineSpinningLabel || "{n} companies", {
+                n: String(companiesInPlay),
+              })}
             </p>
-            <p className="mt-[1.2vh]" style={{ fontSize: "clamp(11px, 0.9vw, 22px)", ...panelText(0.6) }}>
-              Still on the wheel for this draw.
+            <p
+              className="mt-[1.2vh]"
+              style={{
+                fontSize: "clamp(11px, 0.9vw, 22px)",
+                ...segmentColor("--body-subtext-color", FALLBACK_TEXT, 0.6),
+                ...fontVar("--font-body-subtext"),
+              }}
+            >
+              {branding?.bodySubtextSpinningLabel || "Still on the wheel for this draw."}
             </p>
           </div>
         ) : isComplete ? (
           <div className="reveal-enter">
-            <div className="mb-[1.4vh] h-[2px] w-[4.4vw] min-w-[46px] bg-gradient-to-r from-brand-blue to-transparent" />
-            <span className="eyebrow" style={{ ...panelText(0.62), ...fontVar("--font-winner-eyebrow") }}>
+            <div
+              className="mb-[1.4vh] h-[2px] w-[4.4vw] min-w-[46px]"
+              style={accentLineBg("--winner-eyebrow-color", "var(--brand-blue)")}
+            />
+            <span
+              className="eyebrow"
+              style={{ ...segmentColor("--winner-eyebrow-color", FALLBACK_TEXT, 0.62), ...fontVar("--font-winner-eyebrow") }}
+            >
               {branding?.eyebrowCeremonyClosedLabel || "Ceremony draw closed"}
             </span>
             <h2
               className="display-name mt-[1.1vh]"
-              style={{ fontSize: "clamp(1.9rem, 3.9vw, 5.4rem)", ...panelText() }}
+              style={{
+                fontSize: "clamp(1.9rem, 3.9vw, 5.4rem)",
+                ...segmentColor("--body-headline-color", FALLBACK_TEXT),
+                ...fontVar("--font-body-headline"),
+              }}
             >
-              All {totalDraws} winners announced
+              {fillTemplate(branding?.bodyHeadlineCompleteLabel || "All {n} winners announced", {
+                n: String(totalDraws),
+              })}
             </h2>
-            <p className="mt-[1.4vh]" style={{ fontSize: "clamp(11px, 0.92vw, 23px)", ...panelText(0.65) }}>
-              {companiesInPlay} companies remain on the wheel.
+            <p
+              className="mt-[1.4vh]"
+              style={{
+                fontSize: "clamp(11px, 0.92vw, 23px)",
+                ...segmentColor("--body-subtext-color", FALLBACK_TEXT, 0.65),
+                ...fontVar("--font-body-subtext"),
+              }}
+            >
+              {fillTemplate(branding?.bodySubtextCompleteLabel || "{n} companies remain on the wheel.", {
+                n: String(companiesInPlay),
+              })}
             </p>
           </div>
         ) : (
           <div className="reveal-enter">
-            <span className="eyebrow" style={{ ...panelText(0.62), ...fontVar("--font-winner-eyebrow") }}>
+            <span
+              className="eyebrow"
+              style={{ ...segmentColor("--winner-eyebrow-color", FALLBACK_TEXT, 0.62), ...fontVar("--font-winner-eyebrow") }}
+            >
               {winnersCount === 0
                 ? branding?.eyebrowWheelSetLabel || "The wheel is set"
-                : fillTemplate(
-                    branding?.eyebrowDrawOfLabel || "Draw {n} of {m}",
-                    pad(drawNo),
-                    pad(totalDraws),
-                  )}
+                : fillTemplate(branding?.eyebrowDrawOfLabel || "Draw {n} of {m}", {
+                    n: pad(drawNo),
+                    m: pad(totalDraws),
+                  })}
             </span>
             <h2
               className="display-name mt-[1.1vh]"
-              style={{ fontSize: "clamp(1.8rem, 3.7vw, 5.1rem)", ...panelText() }}
+              style={{
+                fontSize: "clamp(1.8rem, 3.7vw, 5.1rem)",
+                ...segmentColor("--body-headline-color", FALLBACK_TEXT),
+                ...fontVar("--font-body-headline"),
+              }}
             >
-              {winnersCount === 0 ? "Let the draw begin" : "Ready for the next name"}
-            </h2>
-            <p className="mt-[1.4vh]" style={{ fontSize: "clamp(11px, 0.92vw, 23px)", ...panelText(0.65) }}>
               {winnersCount === 0
-                ? `${companiesInPlay} companies on the wheel · ${totalDraws} winners to reveal`
-                : `${companiesInPlay} companies in play · ${totalDraws - winnersCount} reveals to go`}
+                ? branding?.bodyHeadlineFirstLabel || "Let the draw begin"
+                : branding?.bodyHeadlineNextLabel || "Ready for the next name"}
+            </h2>
+            <p
+              className="mt-[1.4vh]"
+              style={{
+                fontSize: "clamp(11px, 0.92vw, 23px)",
+                ...segmentColor("--body-subtext-color", FALLBACK_TEXT, 0.65),
+                ...fontVar("--font-body-subtext"),
+              }}
+            >
+              {winnersCount === 0
+                ? fillTemplate(
+                    branding?.bodySubtextFirstLabel || "{n} companies on the wheel · {m} winners to reveal",
+                    { n: String(companiesInPlay), m: String(totalDraws) },
+                  )
+                : fillTemplate(branding?.bodySubtextNextLabel || "{n} companies in play · {m} reveals to go", {
+                    n: String(companiesInPlay),
+                    m: String(totalDraws - winnersCount),
+                  })}
             </p>
           </div>
         )}
@@ -191,19 +299,25 @@ export const WinnerPanel = ({
       <footer className="flex flex-wrap items-end justify-between gap-3 border-t border-brand-light/10 pt-[1.6vh]">
         <span
           className="text-kicker"
-          style={{ fontSize: "clamp(8px, 0.6vw, 14px)", ...panelText(0.45) }}
+          style={{
+            fontSize: "clamp(8px, 0.6vw, 14px)",
+            ...segmentColor("--footer-caption-color", FALLBACK_TEXT, 0.45),
+            ...fontVar("--font-footer-caption"),
+          }}
         >
           {isResult && winner
-            ? `Revealed ${formatTime(winner.wonAt)}`
+            ? fillTemplate(branding?.footerCaptionRevealedLabel || "Revealed {time}", {
+                time: formatTime(winner.wonAt),
+              })
             : isComplete
-              ? "Further spins disabled"
-              : "Main stage · live"}
+              ? branding?.footerCaptionCompleteLabel || "Further spins disabled"
+              : branding?.footerCaptionLiveLabel || "Main stage · live"}
         </span>
         <span
           className="tabular font-semibold"
           style={{
             fontSize: "clamp(10px, 0.72vw, 17px)",
-            ...panelText(0.7),
+            ...segmentColor("--revealed-counter-color", FALLBACK_TEXT, 0.7),
             ...fontVar("--font-revealed-counter"),
           }}
         >
