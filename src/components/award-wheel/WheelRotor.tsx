@@ -5,6 +5,7 @@ import {
   segmentCenterAngle,
   segmentPath,
 } from "@/lib/wheel-geometry";
+import { fontChoiceToFamily } from "@/lib/wheel-fonts";
 import type { Company, DrawPhase } from "@/lib/wheel-types";
 
 type WheelRotorProps = {
@@ -72,7 +73,13 @@ export const WheelRotor = ({ companies, phase, winnerIndex, segmentColorCount }:
                 fontWeight={isWinner ? 800 : 700}
                 letterSpacing="0.045em"
                 className={isWinner ? "label-ink" : "label-bright label-halo"}
-                style={{ paintOrder: "stroke", strokeWidth: 1 }}
+                style={{
+                  paintOrder: "stroke",
+                  strokeWidth: 1,
+                  fontFamily: company.font
+                    ? fontChoiceToFamily(company.font)
+                    : "var(--font-wheel-label, inherit)",
+                }}
               >
                 {company.short}
               </text>

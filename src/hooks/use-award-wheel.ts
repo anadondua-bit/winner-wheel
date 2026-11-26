@@ -2,13 +2,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { deriveWheelView } from "@/lib/wheel-derive";
 import { SPIN_DURATION_MS } from "@/lib/wheel-geometry";
 import { STORAGE_KEY, createInitialState } from "@/lib/wheel-roster";
-import { clampInt, isRecord, normalizeBranding, toAccentName } from "@/lib/wheel-normalize";
+import {
+  clampInt,
+  isRecord,
+  normalizeBranding,
+  normalizeLayout,
+  toAccentName,
+  toFontChoiceOrNull,
+} from "@/lib/wheel-normalize";
 import type {
   AccentName,
   Branding,
   Company,
   DrawPhase,
   DrawState,
+  Layout,
   WheelConfig,
   Winner,
 } from "@/lib/wheel-types";
@@ -18,7 +26,7 @@ const toCompany = (value: unknown): Company | null => {
   const { id, name, short } = value;
   if (typeof id !== "string" || typeof name !== "string" || typeof short !== "string") return null;
   if (!id || !name) return null;
-  return { id, name, short };
+  return { id, name, short, font: toFontChoiceOrNull(value.font) };
 };
 
 const toWinner = (value: unknown): Winner | null => {
@@ -86,6 +94,7 @@ const normalizeState = (raw: unknown): DrawState => {
       wallWidth: clampInt(config.wallWidth, 320, 7680, fallback.config.wallWidth),
       wallHeight: clampInt(config.wallHeight, 200, 4320, fallback.config.wallHeight),
       branding: normalizeBranding(config.branding),
+      layout: normalizeLayout(config.layout),
     },
     baseRoster,
     winners,
@@ -138,6 +147,7 @@ export type AwardWheelApi = {
     wallWidth: number;
     wallHeight: number;
     branding: Branding;
+    layout: Layout;
   }) => void;
 };
 
@@ -235,6 +245,7 @@ export const useAwardWheel = (): AwardWheelApi => {
       wallWidth: number;
       wallHeight: number;
       branding: Branding;
+      layout: Layout;
     }) => {
       const current = stateRef.current;
       if (draw.roster.length < current.config.totalDraws) return;
@@ -262,6 +273,7 @@ export const useAwardWheel = (): AwardWheelApi => {
           wallWidth: clampInt(draw.wallWidth, 320, 7680, current.config.wallWidth),
           wallHeight: clampInt(draw.wallHeight, 200, 4320, current.config.wallHeight),
           branding: draw.branding,
+          layout: draw.layout,
         },
         baseRoster: draw.roster,
         winners,

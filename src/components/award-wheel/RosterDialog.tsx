@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BrandingPanel } from "./BrandingPanel";
+import { LayoutPanel } from "./LayoutPanel";
 import { RosterTable } from "./RosterTable";
 import { downloadTextFile } from "@/lib/csv";
 import {
@@ -35,7 +36,7 @@ import {
 } from "@/lib/wheel-roster";
 import type { RosterRowDraft } from "@/lib/wheel-roster";
 import { configToSettingsCsv, settingsCsvToConfigPatch } from "@/lib/wheel-settings-csv";
-import type { AccentName, Branding, Company, WheelConfig } from "@/lib/wheel-types";
+import type { AccentName, Branding, Company, Layout, WheelConfig } from "@/lib/wheel-types";
 
 type RosterDialogProps = {
   open: boolean;
@@ -60,7 +61,12 @@ const accents: Array<{ id: AccentName; label: string; swatch: string }> = [
 const parseSize = (value: string): number => Number(value.replace(/[^0-9]/g, ""));
 
 const companiesToRows = (companies: Company[]): RosterRowDraft[] =>
-  companies.map((company) => ({ rowKey: company.id, name: company.name, short: company.short }));
+  companies.map((company) => ({
+    rowKey: company.id,
+    name: company.name,
+    short: company.short,
+    font: company.font,
+  }));
 
 const timestampForFilename = (): string => new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
 
@@ -83,6 +89,7 @@ export const RosterDialog = ({
   const [wallHeight, setWallHeight] = useState(String(config.wallHeight));
   const [rows, setRows] = useState<RosterRowDraft[]>(() => companiesToRows(roster));
   const [branding, setBranding] = useState<Branding>(config.branding);
+  const [layout, setLayout] = useState<Layout>(config.layout);
   const rosterFileRef = useRef<HTMLInputElement>(null);
   const settingsFileRef = useRef<HTMLInputElement>(null);
 
@@ -95,6 +102,7 @@ export const RosterDialog = ({
     setWallHeight(String(config.wallHeight));
     setRows(companiesToRows(roster));
     setBranding(config.branding);
+    setLayout(config.layout);
   }, [open, config, roster]);
 
   const parsed = useMemo(
@@ -136,7 +144,16 @@ export const RosterDialog = ({
   const handleExportSettingsCsv = () => {
     downloadTextFile(
       `wheel-settings-${timestampForFilename()}.csv`,
-      configToSettingsCsv({ ...config, title, subtitle, accent, wallWidth: width, wallHeight: height, branding }),
+      configToSettingsCsv({
+        ...config,
+        title,
+        subtitle,
+        accent,
+        wallWidth: width,
+        wallHeight: height,
+        branding,
+        layout,
+      }),
     );
   };
 
@@ -152,6 +169,7 @@ export const RosterDialog = ({
         if (patch.wallWidth !== undefined) setWallWidth(String(patch.wallWidth));
         if (patch.wallHeight !== undefined) setWallHeight(String(patch.wallHeight));
         if (patch.branding !== undefined) setBranding(patch.branding);
+        if (patch.layout !== undefined) setLayout(patch.layout);
         toast.success("Settings imported — review, then Apply");
       })
       .catch(() => toast.error(`Could not read "${file.name}"`));
@@ -166,6 +184,7 @@ export const RosterDialog = ({
       wallWidth: width,
       wallHeight: height,
       branding,
+      layout,
     });
     onApplyRoster(parsed.companies);
     onOpenChange(false);
@@ -268,6 +287,7 @@ export const RosterDialog = ({
             <TabsTrigger value="event">Event</TabsTrigger>
             <TabsTrigger value="roster">Roster</TabsTrigger>
             <TabsTrigger value="branding">Branding</TabsTrigger>
+            <TabsTrigger value="sizing">Sizing</TabsTrigger>
           </TabsList>
 
           <TabsContent value="event" className="mt-5 grid gap-5">
@@ -397,11 +417,17 @@ export const RosterDialog = ({
               </div>
             </div>
 
-            <RosterTable rows={rows} onChange={setRows} disabled={rosterLocked} />
+            <RosterTable
+              rows={rows}
+              onChange={setRows}
+              disabled={rosterLocked}
+              hasCustomFont={Boolean(branding.customFontDataUrl)}
+            />
 
             <p className="text-[11px] leading-relaxed text-brand-light/35">
-              Leave "Short" blank to derive it from the name. Import replaces the whole list;
-              export downloads exactly what's in the table right now.
+              Leave "Short" blank to derive it from the name, and "Font" on Default to use the
+              wheel's own label font. Import replaces the whole list; export downloads exactly
+              what's in the table right now.
             </p>
 
             {!rosterLocked && (parsed.problems.length > 0 || parsed.warnings.length > 0) && (
@@ -424,6 +450,10 @@ export const RosterDialog = ({
 
           <TabsContent value="branding" className="mt-5">
             <BrandingPanel branding={branding} accent={accent} onChange={setBranding} />
+          </TabsContent>
+
+          <TabsContent value="sizing" className="mt-5">
+            <LayoutPanel layout={layout} onChange={setLayout} />
           </TabsContent>
         </Tabs>
 

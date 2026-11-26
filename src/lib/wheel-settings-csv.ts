@@ -1,6 +1,6 @@
 import { parseCsv, toCsvRow } from "./csv";
 import { SEGMENT_SLOT_COUNT, defaultConfig } from "./wheel-roster";
-import { clampInt, normalizeBranding, toAccentName } from "./wheel-normalize";
+import { clampInt, normalizeBranding, normalizeLayout, toAccentName } from "./wheel-normalize";
 import type { WheelConfig } from "./wheel-types";
 
 /**
@@ -13,6 +13,31 @@ const BRANDING_SCALAR_KEYS = [
   "font",
   "customFontName",
   "customFontDataUrl",
+  "headerTitleFont",
+  "statusFont",
+  "winnerPanelFont",
+  "winnerStatusFont",
+  "winnerEyebrowFont",
+  "winnerNameFont",
+  "drawCounterFont",
+  "revealedCounterFont",
+  "wheelLabelFont",
+  "statusLiveLabel",
+  "statusConnectingLabel",
+  "statusOfflineLabel",
+  "winnerStatusCompleteLabel",
+  "winnerStatusWinnerLabel",
+  "winnerStatusInPlayLabel",
+  "winnerStatusReadyLabel",
+  "winnerStatusNextDrawLabel",
+  "eyebrowWinnerDrawLabel",
+  "eyebrowTurningLabel",
+  "eyebrowInProgressLabel",
+  "eyebrowCeremonyClosedLabel",
+  "eyebrowWheelSetLabel",
+  "eyebrowDrawOfLabel",
+  "drawCounterLabel",
+  "revealedCounterLabel",
   "brandMint",
   "brandTeal",
   "brandCyan",
@@ -24,13 +49,35 @@ const BRANDING_SCALAR_KEYS = [
   "rimStart",
   "rimEnd",
   "hub",
-  "pointer",
+  "rimHalo",
+  "rimEdgeLight",
+  "rimEdgeDark",
+  "frameShadow",
+  "stud",
+  "studRing",
+  "studCore",
+  "hubRing",
+  "hubEdge",
+  "hubCore",
+  "hubDot",
+  "hairline",
+  "labelBright",
+  "labelHalo",
   "headerTitle",
+  "statusText",
+  "winnerPanelText",
   "stageText",
   "accentButtons",
   "tintWinnerPanel",
-  "tintWinnersRail",
   "tintControlBar",
+] as const;
+
+const LAYOUT_SCALAR_KEYS = [
+  "logoScale",
+  "statusScale",
+  "wheelScale",
+  "winnerPanelScale",
+  "titleScale",
 ] as const;
 
 export const configToSettingsCsv = (config: WheelConfig): string => {
@@ -48,6 +95,9 @@ export const configToSettingsCsv = (config: WheelConfig): string => {
   rows.push(["branding.segmentColorCount", String(config.branding.segmentColorCount)]);
   config.branding.segmentColors.forEach((hex, index) => {
     rows.push([`branding.segmentColors.${index + 1}`, hex ?? ""]);
+  });
+  LAYOUT_SCALAR_KEYS.forEach((key) => {
+    rows.push([`layout.${key}`, String(config.layout[key])]);
   });
 
   return ["key,value", ...rows.map(([key, value]) => toCsvRow([key, value]))].join("\n");
@@ -74,6 +124,12 @@ export const settingsCsvToConfigPatch = (text: string): Partial<Omit<WheelConfig
   );
   brandingRecord.segmentColorCount = map.get("branding.segmentColorCount");
 
+  const layoutRecord: Record<string, unknown> = {};
+  LAYOUT_SCALAR_KEYS.forEach((key) => {
+    const value = map.get(`layout.${key}`);
+    if (value) layoutRecord[key] = value;
+  });
+
   return {
     title: map.get("title")?.trim() || defaultConfig.title,
     subtitle: map.get("subtitle") ?? defaultConfig.subtitle,
@@ -81,5 +137,6 @@ export const settingsCsvToConfigPatch = (text: string): Partial<Omit<WheelConfig
     wallWidth: clampInt(map.get("wallWidth"), 320, 7680, defaultConfig.wallWidth),
     wallHeight: clampInt(map.get("wallHeight"), 200, 4320, defaultConfig.wallHeight),
     branding: normalizeBranding(brandingRecord),
+    layout: normalizeLayout(layoutRecord),
   };
 };

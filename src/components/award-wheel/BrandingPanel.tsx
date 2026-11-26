@@ -1,9 +1,17 @@
 import { Image as ImageIcon, RotateCcw, Type as TypeIcon, Upload } from "lucide-react";
-import { useRef } from "react";
+import { useRef, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { FONT_PRESETS } from "@/lib/wheel-fonts";
 import { WHEEL_PART_DEFAULT_HEX, accentDefaultHex, defaultSegmentHex } from "@/lib/wheel-palette";
-import { MAX_BACKGROUND_BYTES, MAX_FONT_BYTES, MAX_LOGO_BYTES, readFileAsDataUrl } from "@/lib/wheel-upload";
+import { joinRgbaHex, splitRgbaHex } from "@/lib/wheel-color";
+import {
+  MAX_BACKGROUND_BYTES,
+  MAX_FONT_BYTES,
+  MAX_LOGO_BYTES,
+  readFileAsDataUrl,
+  readImageFileFitted,
+} from "@/lib/wheel-upload";
 import type { AccentName, Branding, FontChoice } from "@/lib/wheel-types";
 
 type BrandingPanelProps = {
@@ -13,13 +21,6 @@ type BrandingPanelProps = {
 };
 
 const fieldLabel = "text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-light/45";
-
-const FONT_PRESETS: Array<{ id: Exclude<FontChoice, "custom">; label: string }> = [
-  { id: "manrope", label: "Manrope" },
-  { id: "system-sans", label: "System sans" },
-  { id: "system-serif", label: "Serif" },
-  { id: "system-mono", label: "Mono" },
-];
 
 type AccentDefaults = ReturnType<typeof accentDefaultHex>;
 
@@ -43,23 +44,143 @@ const WINNER_SEGMENT_FIELDS: FixedColorFieldSpec[] = [
   { key: "winnerLabel", label: "Highlight label" },
 ];
 
-const CHASSIS_FIELDS: FixedColorFieldSpec[] = [
+const RIM_FRAME_FIELDS: FixedColorFieldSpec[] = [
   { key: "rimStart", label: "Rim start" },
   { key: "rimEnd", label: "Rim end" },
+  { key: "rimHalo", label: "Rim glow", description: "Soft halo just outside the rim." },
+  { key: "rimEdgeLight", label: "Rim highlight", description: "Thin light line on the rim's outer edge." },
+  { key: "rimEdgeDark", label: "Rim shadow edge", description: "Thin dark line on the rim's inner edge." },
+  { key: "frameShadow", label: "Frame", description: "The shadow ring framing the segments." },
+];
+
+const HUB_FIELDS: FixedColorFieldSpec[] = [
   { key: "hub", label: "Hub" },
-  { key: "pointer", label: "Pointer" },
+  { key: "hubRing", label: "Hub ring" },
+  { key: "hubEdge", label: "Hub edge" },
+  { key: "hubCore", label: "Hub core" },
+  { key: "hubDot", label: "Hub dot" },
+];
+
+const STUD_FIELDS: FixedColorFieldSpec[] = [
+  { key: "stud", label: "Stud" },
+  { key: "studRing", label: "Stud ring" },
+  { key: "studCore", label: "Stud center" },
+];
+
+const SEGMENT_DETAIL_FIELDS: FixedColorFieldSpec[] = [
+  { key: "hairline", label: "Divider lines", description: "Thin lines between segments." },
+  { key: "labelBright", label: "Label", description: "Default (non-winning) segment text." },
+  { key: "labelHalo", label: "Label outline", description: "Dark outline behind every label for legibility." },
 ];
 
 const CANVAS_TEXT_FIELDS: FixedColorFieldSpec[] = [
-  { key: "headerTitle", label: "Header title", description: "The event name at the top left." },
-  { key: "stageText", label: "Stage text", description: "Labels, counters and the winner name." },
+  { key: "headerTitle", label: "Event title", description: "The event name, bottom left." },
+  { key: "statusText", label: "Live indicator", description: "The \"Live\" status pill, top left." },
+  {
+    key: "winnerPanelText",
+    label: "Winner panel",
+    description: "Every text in the result card: status, draw counter, winner name.",
+  },
+  {
+    key: "stageText",
+    label: "Stage text (fallback)",
+    description: "Used by any of the above that hasn't been given its own color.",
+  },
   { key: "accentButtons", label: "Accent & buttons", description: "Start spin, live dot and highlights." },
 ];
 
+type ComponentFontKey =
+  | "headerTitleFont"
+  | "statusFont"
+  | "winnerPanelFont"
+  | "winnerStatusFont"
+  | "winnerEyebrowFont"
+  | "winnerNameFont"
+  | "drawCounterFont"
+  | "revealedCounterFont";
+
+type TextLabelKey =
+  | "statusLiveLabel"
+  | "statusConnectingLabel"
+  | "statusOfflineLabel"
+  | "winnerStatusCompleteLabel"
+  | "winnerStatusWinnerLabel"
+  | "winnerStatusInPlayLabel"
+  | "winnerStatusReadyLabel"
+  | "winnerStatusNextDrawLabel"
+  | "eyebrowWinnerDrawLabel"
+  | "eyebrowTurningLabel"
+  | "eyebrowInProgressLabel"
+  | "eyebrowCeremonyClosedLabel"
+  | "eyebrowWheelSetLabel"
+  | "eyebrowDrawOfLabel"
+  | "drawCounterLabel"
+  | "revealedCounterLabel";
+
+type TextLabelFieldSpec = { key: TextLabelKey; label: string; placeholder: string };
+
+const COMPONENT_FONT_FIELDS: Array<{
+  key: ComponentFontKey;
+  label: string;
+  textFields?: TextLabelFieldSpec[];
+}> = [
+  { key: "headerTitleFont", label: "Event title" },
+  {
+    key: "statusFont",
+    label: "Live indicator",
+    textFields: [
+      { key: "statusLiveLabel", label: "Live", placeholder: "Live" },
+      { key: "statusConnectingLabel", label: "Connecting", placeholder: "Connecting" },
+      { key: "statusOfflineLabel", label: "Offline", placeholder: "Offline" },
+    ],
+  },
+  { key: "winnerPanelFont", label: "Winner panel (fallback)" },
+  {
+    key: "winnerStatusFont",
+    label: "Winner status",
+    textFields: [
+      { key: "winnerStatusWinnerLabel", label: "Winner", placeholder: "Winner" },
+      { key: "winnerStatusInPlayLabel", label: "In play", placeholder: "In play" },
+      { key: "winnerStatusReadyLabel", label: "Ready", placeholder: "Ready" },
+      { key: "winnerStatusNextDrawLabel", label: "Next draw", placeholder: "Next draw" },
+      { key: "winnerStatusCompleteLabel", label: "Draw complete", placeholder: "Draw complete" },
+    ],
+  },
+  {
+    key: "winnerEyebrowFont",
+    label: "Draw eyebrow",
+    textFields: [
+      { key: "eyebrowWinnerDrawLabel", label: "Winner reveal", placeholder: "Winner · draw" },
+      { key: "eyebrowTurningLabel", label: "First spin", placeholder: "The wheel is turning" },
+      { key: "eyebrowInProgressLabel", label: "Spinning", placeholder: "Draw in progress" },
+      { key: "eyebrowWheelSetLabel", label: "Before first draw", placeholder: "The wheel is set" },
+      { key: "eyebrowDrawOfLabel", label: "Between draws ({n}/{m})", placeholder: "Draw {n} of {m}" },
+      { key: "eyebrowCeremonyClosedLabel", label: "All done", placeholder: "Ceremony draw closed" },
+    ],
+  },
+  { key: "winnerNameFont", label: "Winner name" },
+  {
+    key: "drawCounterFont",
+    label: "Draw counter",
+    textFields: [{ key: "drawCounterLabel", label: "Prefix word", placeholder: "DRAW" }],
+  },
+  {
+    key: "revealedCounterFont",
+    label: "Revealed counter",
+    textFields: [{ key: "revealedCounterLabel", label: "Suffix word", placeholder: "REVEALED" }],
+  },
+];
+
+/** Separate from the above since it lives in the Wheel section, not the stage-text list. */
+const WHEEL_LABEL_FONT_FIELD = { key: "wheelLabelFont" as const, label: "Segment names" };
+
 const PANEL_TINT_FIELDS: FixedColorFieldSpec[] = [
   { key: "tintWinnerPanel", label: "Winner panel", description: "The large result card." },
-  { key: "tintWinnersRail", label: "Winners rail", description: "The revealed names list." },
-  { key: "tintControlBar", label: "Control bar", description: "The operator strip along the bottom." },
+  {
+    key: "tintControlBar",
+    label: "Control bar",
+    description: "The operator strip along the bottom — command center only, never shown on stage.",
+  },
 ];
 
 type ColorPickerFieldProps = {
@@ -98,6 +219,118 @@ const ColorPickerField = ({ label, description, value, overridden, onPick, onRes
   </div>
 );
 
+type RgbaPickerFieldProps = {
+  label: string;
+  description?: string;
+  hex: string;
+  alpha: number;
+  overridden: boolean;
+  onPick: (hex: string, alpha: number) => void;
+  onReset: () => void;
+};
+
+/** Same as ColorPickerField, plus an alpha slider — the color's own transparency, not a fixed one baked into the CSS. */
+const RgbaPickerField = ({
+  label,
+  description,
+  hex,
+  alpha,
+  overridden,
+  onPick,
+  onReset,
+}: RgbaPickerFieldProps) => (
+  <div className="flex items-center gap-3 rounded-[0.7rem] border border-brand-light/12 px-3 py-2.5">
+    <input
+      type="color"
+      value={hex}
+      onChange={(event) => onPick(event.target.value, alpha)}
+      className="h-8 w-8 shrink-0 cursor-pointer rounded border border-brand-light/20 bg-transparent p-0"
+      aria-label={label}
+    />
+    <div className="min-w-0 flex-1">
+      <p className="truncate text-[12px] font-semibold text-brand-light/80">{label}</p>
+      {description ? <p className="truncate text-[10.5px] text-brand-light/40">{description}</p> : null}
+      <div className="mt-1 flex items-center gap-2">
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={Math.round(alpha * 100)}
+          onChange={(event) => onPick(hex, Number(event.target.value) / 100)}
+          className="h-1 flex-1 accent-brand-teal"
+          aria-label={`${label} opacity`}
+        />
+        <span className="w-9 shrink-0 text-right text-[10.5px] tabular-nums text-brand-light/40">
+          {Math.round(alpha * 100)}%
+        </span>
+      </div>
+    </div>
+    {overridden ? (
+      <button
+        type="button"
+        onClick={onReset}
+        title="Reset to default"
+        className="shrink-0 text-brand-light/30 hover:text-brand-light/70"
+      >
+        <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+      </button>
+    ) : null}
+  </div>
+);
+
+type FontOverrideFieldProps = {
+  label: string;
+  value: FontChoice | null;
+  hasCustomFont: boolean;
+  onChange: (value: FontChoice | null) => void;
+  children?: ReactNode;
+};
+
+/** Lets one component use a different font from the base choice above; null inherits it. */
+const FontOverrideField = ({ label, value, hasCustomFont, onChange, children }: FontOverrideFieldProps) => (
+  <div className="grid gap-2 rounded-[0.7rem] border border-brand-light/12 px-3 py-2.5">
+    <div className="flex items-center justify-between gap-3">
+      <p className="truncate text-[12px] font-semibold text-brand-light/80">{label}</p>
+      <select
+        value={value ?? ""}
+        onChange={(event) => onChange((event.target.value || null) as FontChoice | null)}
+        className="h-8 shrink-0 rounded-md border border-brand-light/15 bg-brand-ink/60 px-2 text-[11px] text-brand-light"
+        aria-label={`${label} font`}
+      >
+        <option value="">Default</option>
+        {FONT_PRESETS.map((preset) => (
+          <option key={preset.id} value={preset.id}>
+            {preset.label}
+          </option>
+        ))}
+        {hasCustomFont ? <option value="custom">Custom upload</option> : null}
+      </select>
+    </div>
+    {children}
+  </div>
+);
+
+type LabelTextFieldProps = {
+  label: string;
+  placeholder: string;
+  value: string | null;
+  onChange: (next: string | null) => void;
+};
+
+/** One editable word/phrase — the built-in default shows as a placeholder until overridden. */
+const LabelTextField = ({ label, placeholder, value, onChange }: LabelTextFieldProps) => (
+  <div className="flex items-center gap-2">
+    <span className="w-[8rem] shrink-0 truncate text-[10.5px] text-brand-light/40">{label}</span>
+    <input
+      type="text"
+      value={value ?? ""}
+      placeholder={placeholder}
+      onChange={(event) => onChange(event.target.value || null)}
+      className="h-7 flex-1 rounded-md border border-brand-light/12 bg-brand-ink/40 px-2 text-[11px] text-brand-light placeholder:text-brand-light/30"
+    />
+  </div>
+);
+
 /** Logo, background, display font and every brand/segment color, each independently editable. */
 export const BrandingPanel = ({ branding, accent, onChange }: BrandingPanelProps) => {
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -122,6 +355,24 @@ export const BrandingPanel = ({ branding, accent, onChange }: BrandingPanelProps
     );
   };
 
+  const renderTintField = (field: FixedColorFieldSpec) => {
+    const override = branding[field.key];
+    const defaultHex = WHEEL_PART_DEFAULT_HEX[field.key];
+    const parsed = (override ? splitRgbaHex(override) : null) ?? { hex: defaultHex, alpha: 1 };
+    return (
+      <RgbaPickerField
+        key={field.key}
+        label={field.label}
+        description={field.description}
+        hex={parsed.hex}
+        alpha={parsed.alpha}
+        overridden={Boolean(override)}
+        onPick={(hex, alpha) => onChange({ ...branding, [field.key]: joinRgbaHex(hex, alpha) })}
+        onReset={() => onChange({ ...branding, [field.key]: null })}
+      />
+    );
+  };
+
   const withUploadError = async (task: () => Promise<void>) => {
     try {
       await task();
@@ -141,8 +392,12 @@ export const BrandingPanel = ({ branding, accent, onChange }: BrandingPanelProps
   const handleBackgroundFile = (file: File | undefined) => {
     if (!file) return;
     void withUploadError(async () => {
-      const dataUrl = await readFileAsDataUrl(file, MAX_BACKGROUND_BYTES);
+      const wasOversized = file.size > MAX_BACKGROUND_BYTES;
+      const dataUrl = await readImageFileFitted(file, MAX_BACKGROUND_BYTES);
       onChange({ ...branding, backgroundDataUrl: dataUrl });
+      if (wasOversized) {
+        toast.success(`"${file.name}" was compressed to fit the ${Math.round(MAX_BACKGROUND_BYTES / 1024)} KB live-sync limit.`);
+      }
     });
   };
 
@@ -250,7 +505,8 @@ export const BrandingPanel = ({ branding, accent, onChange }: BrandingPanelProps
               </button>
             ) : (
               <span className="text-[11px] text-brand-light/35">
-                JPG, PNG or WebP — up to {Math.round(MAX_BACKGROUND_BYTES / 1024)} KB
+                JPG, PNG or WebP — larger images are compressed automatically to fit the live
+                sync limit (~{Math.round(MAX_BACKGROUND_BYTES / 1024 / 1024 * 10) / 10} MB)
               </span>
             )}
           </div>
@@ -311,6 +567,37 @@ export const BrandingPanel = ({ branding, accent, onChange }: BrandingPanelProps
           Presets use fonts already on this machine, so they work offline. A custom upload is
           registered in the browser and travels with the show record.
         </p>
+
+        <span className={`${fieldLabel} mt-2`}>Per-component font &amp; wording</span>
+        <p className="text-[11px] leading-relaxed text-brand-light/35">
+          Give any of these its own font, and edit any of its fixed words — leave a word blank to
+          keep the built-in default (shown as a placeholder). The winner's name and the wheel's
+          segment names aren't editable here since they come from the roster, not fixed copy. Winner
+          status, draw eyebrow, winner name, draw counter and revealed counter fall back to "Winner
+          panel" first, then to the font chosen above; everything else falls back straight to it. The
+          wheel's segment names have their own font, in the Wheel section below.
+        </p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {COMPONENT_FONT_FIELDS.map((field) => (
+            <FontOverrideField
+              key={field.key}
+              label={field.label}
+              value={branding[field.key]}
+              hasCustomFont={Boolean(branding.customFontDataUrl)}
+              onChange={(value) => onChange({ ...branding, [field.key]: value })}
+            >
+              {field.textFields?.map((textField) => (
+                <LabelTextField
+                  key={textField.key}
+                  label={textField.label}
+                  placeholder={textField.placeholder}
+                  value={branding[textField.key]}
+                  onChange={(next) => onChange({ ...branding, [textField.key]: next })}
+                />
+              ))}
+            </FontOverrideField>
+          ))}
+        </div>
       </section>
 
       <section className="grid gap-2">
@@ -351,97 +638,144 @@ export const BrandingPanel = ({ branding, accent, onChange }: BrandingPanelProps
       </section>
 
       <section className="grid gap-2">
-        <span className={fieldLabel}>Canvas elements</span>
+        <span className={fieldLabel}>Stage text</span>
+        <p className="text-[11px] leading-relaxed text-brand-light/35">
+          Each piece of stage text has its own color — never affects the command center's own
+          screen, only the LED wall.
+        </p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {CANVAS_TEXT_FIELDS.map(renderFixedField)}
         </div>
 
         <span className={`${fieldLabel} mt-3`}>Panel tints</span>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {PANEL_TINT_FIELDS.map(renderFixedField)}
-        </div>
-      </section>
-
-      <section className="grid gap-2">
-        <span className={fieldLabel}>Winning segment</span>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {WINNER_SEGMENT_FIELDS.map(renderFixedField)}
-        </div>
-      </section>
-
-      <section className="grid gap-2">
-        <span className={fieldLabel}>Rim, hub &amp; pointer</span>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {CHASSIS_FIELDS.map(renderFixedField)}
-        </div>
-      </section>
-
-      <section className="grid gap-2">
-        <div className="flex items-center justify-between">
-          <span className={fieldLabel}>Wheel segment colors</span>
-          <button
-            type="button"
-            onClick={() =>
-              onChange({ ...branding, segmentColors: branding.segmentColors.map(() => null) })
-            }
-            className="text-[11px] text-brand-light/40 hover:text-brand-light/70"
-          >
-            Reset all
-          </button>
-        </div>
         <p className="text-[11px] leading-relaxed text-brand-light/35">
-          Cycles across however many companies are on the wheel.
+          Color and opacity together — the slider is the panel's own transparency, not a fixed
+          value baked into the stylesheet.
         </p>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {PANEL_TINT_FIELDS.map(renderTintField)}
+        </div>
+      </section>
 
-        <div className="flex items-center gap-3 rounded-[0.7rem] border border-brand-light/12 px-3 py-2">
-          <label htmlFor="segment-color-count" className="text-[11px] font-semibold text-brand-light/70">
-            Number of wheel colors
-          </label>
-          <input
-            id="segment-color-count"
-            type="range"
-            min={2}
-            max={segmentDefaults.length}
-            value={branding.segmentColorCount}
-            onChange={(event) =>
-              onChange({ ...branding, segmentColorCount: Number(event.target.value) })
-            }
-            className="h-1.5 flex-1 accent-brand-mint"
-          />
-          <span className="tabular w-5 text-right text-[12px] font-semibold text-brand-light">
-            {branding.segmentColorCount}
+      <section className="grid gap-5 rounded-[1rem] border border-brand-light/10 bg-brand-light/[0.02] p-4">
+        <div>
+          <span className="text-[11px] font-bold uppercase tracking-[0.24em] text-brand-light/75">
+            Wheel
           </span>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-brand-light/35">
+            Every part of the physical wheel graphic — the segments, the winning highlight, the rim
+            and frame around them, the hub, and the rivet studs.
+          </p>
         </div>
-        <p className="text-[11px] leading-relaxed text-brand-light/35">
-          Fewer colors repeat the pattern sooner for a bolder, more graphic wheel. Dimmed swatches
-          below aren't currently used.
-        </p>
 
-        <div className="grid grid-cols-5 gap-2.5 sm:grid-cols-10">
-          {branding.segmentColors.map((hex, index) => (
-            <div
-              key={index}
-              className={`flex flex-col items-center gap-1 ${
-                index >= branding.segmentColorCount ? "opacity-35" : ""
-              }`}
+        <div className="grid gap-2">
+          <span className={fieldLabel}>Winning segment</span>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {WINNER_SEGMENT_FIELDS.map(renderFixedField)}
+          </div>
+        </div>
+
+        <div className="grid gap-2">
+          <span className={fieldLabel}>Segment detail</span>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {SEGMENT_DETAIL_FIELDS.map(renderFixedField)}
+            <FontOverrideField
+              label={WHEEL_LABEL_FONT_FIELD.label}
+              value={branding[WHEEL_LABEL_FONT_FIELD.key]}
+              hasCustomFont={Boolean(branding.customFontDataUrl)}
+              onChange={(value) => onChange({ ...branding, [WHEEL_LABEL_FONT_FIELD.key]: value })}
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-2">
+          <span className={fieldLabel}>Rim &amp; frame</span>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {RIM_FRAME_FIELDS.map(renderFixedField)}
+          </div>
+        </div>
+
+        <div className="grid gap-2">
+          <span className={fieldLabel}>Hub</span>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {HUB_FIELDS.map(renderFixedField)}
+          </div>
+        </div>
+
+        <div className="grid gap-2">
+          <span className={fieldLabel}>Studs</span>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {STUD_FIELDS.map(renderFixedField)}
+          </div>
+        </div>
+
+        <div className="grid gap-2">
+          <div className="flex items-center justify-between">
+            <span className={fieldLabel}>Wheel segment colors</span>
+            <button
+              type="button"
+              onClick={() =>
+                onChange({ ...branding, segmentColors: branding.segmentColors.map(() => null) })
+              }
+              className="text-[11px] text-brand-light/40 hover:text-brand-light/70"
             >
-              <input
-                type="color"
-                value={hex ?? segmentDefaults[index]}
-                onChange={(event) => setSegmentColor(index, event.target.value)}
-                className="h-8 w-8 cursor-pointer rounded-md border border-brand-light/20 bg-transparent p-0"
-                aria-label={`Segment ${index + 1}`}
-              />
-              <button
-                type="button"
-                onClick={() => resetSegmentColor(index)}
-                className={`text-[9px] ${hex ? "text-brand-light/45 hover:text-brand-light/80" : "text-brand-light/20"}`}
-                disabled={!hex}
+              Reset all
+            </button>
+          </div>
+          <p className="text-[11px] leading-relaxed text-brand-light/35">
+            Cycles across however many companies are on the wheel.
+          </p>
+
+          <div className="flex items-center gap-3 rounded-[0.7rem] border border-brand-light/12 px-3 py-2">
+            <label htmlFor="segment-color-count" className="text-[11px] font-semibold text-brand-light/70">
+              Number of wheel colors
+            </label>
+            <input
+              id="segment-color-count"
+              type="range"
+              min={2}
+              max={segmentDefaults.length}
+              value={branding.segmentColorCount}
+              onChange={(event) =>
+                onChange({ ...branding, segmentColorCount: Number(event.target.value) })
+              }
+              className="h-1.5 flex-1 accent-brand-mint"
+            />
+            <span className="tabular w-5 text-right text-[12px] font-semibold text-brand-light">
+              {branding.segmentColorCount}
+            </span>
+          </div>
+          <p className="text-[11px] leading-relaxed text-brand-light/35">
+            Fewer colors repeat the pattern sooner for a bolder, more graphic wheel. Dimmed swatches
+            below aren't currently used.
+          </p>
+
+          <div className="grid grid-cols-5 gap-2.5 sm:grid-cols-10">
+            {branding.segmentColors.map((hex, index) => (
+              <div
+                key={index}
+                className={`flex flex-col items-center gap-1 ${
+                  index >= branding.segmentColorCount ? "opacity-35" : ""
+                }`}
               >
-                {index + 1}
-              </button>
-            </div>
-          ))}
+                <input
+                  type="color"
+                  value={hex ?? segmentDefaults[index]}
+                  onChange={(event) => setSegmentColor(index, event.target.value)}
+                  className="h-8 w-8 cursor-pointer rounded-md border border-brand-light/20 bg-transparent p-0"
+                  aria-label={`Segment ${index + 1}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => resetSegmentColor(index)}
+                  className={`text-[9px] ${hex ? "text-brand-light/45 hover:text-brand-light/80" : "text-brand-light/20"}`}
+                  disabled={!hex}
+                >
+                  {index + 1}
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     </div>

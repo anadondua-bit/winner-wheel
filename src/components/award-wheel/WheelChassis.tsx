@@ -25,6 +25,13 @@ export const WheelChassis = ({ landedKey }: WheelChassisProps) => (
       <filter id="pointer-shadow" x="-60%" y="-40%" width="220%" height="220%">
         <feDropShadow dx="0" dy="8" stdDeviation="10" floodOpacity="0.65" />
       </filter>
+      <linearGradient id="pointer-silver" x1="0.1" y1="0" x2="0.85" y2="1">
+        <stop offset="0%" stopColor="#f8f9fa" />
+        <stop offset="22%" stopColor="#c7ccd1" />
+        <stop offset="45%" stopColor="#f1f3f4" />
+        <stop offset="68%" stopColor="#999fa6" />
+        <stop offset="100%" stopColor="#dde1e4" />
+      </linearGradient>
     </defs>
 
     {/* soft halo hugging the rim */}
@@ -68,7 +75,7 @@ export const WheelChassis = ({ landedKey }: WheelChassisProps) => (
       style={{ transformBox: "view-box", transformOrigin: "500px 30px" }}
       filter="url(#pointer-shadow)"
     >
-      <path d={pointerPath} className="pointer-fill pointer-edge" strokeWidth={2.5} />
+      <path d={pointerPath} fill="url(#pointer-silver)" className="pointer-edge" strokeWidth={2.5} />
       <path d="M500 96 L472 44 L528 44 Z" className="pointer-shade" />
     </g>
   </svg>

@@ -1,8 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
-import { defaultBranding } from "./wheel-roster";
-import { normalizeBranding } from "./wheel-normalize";
-import type { Branding, Company, Winner } from "./wheel-types";
+import { defaultBranding, defaultLayout } from "./wheel-roster";
+import { normalizeBranding, normalizeLayout, toFontChoiceOrNull } from "./wheel-normalize";
+import type { Branding, Company, Layout, Winner } from "./wheel-types";
 
 /**
  * Durable show record. Runs and winners are append-only: a reset starts a new
@@ -26,6 +26,7 @@ export type RemoteDraw = {
   wallHeight: number;
   roster: Company[];
   branding: Branding;
+  layout: Layout;
   winners: Winner[];
   startedAt: string;
 };
@@ -37,21 +38,27 @@ const parseCompanies = (value: Json | undefined): Company[] => {
   if (!Array.isArray(value)) return [];
   return value.flatMap((entry) => {
     if (!isRecord(entry)) return [];
-    const { id, name, short } = entry;
+    const { id, name, short, font } = entry;
     if (typeof id !== "string" || typeof name !== "string" || typeof short !== "string") return [];
-    return [{ id, name, short }];
+    return [{ id, name, short, font: toFontChoiceOrNull(font) }];
   });
 };
 
-const parseRosterPayload = (value: Json): { companies: Company[]; branding: Branding } => {
+const parseRosterPayload = (
+  value: Json,
+): { companies: Company[]; branding: Branding; layout: Layout } => {
   if (Array.isArray(value)) {
     // Legacy shape, from before branding existed: a bare company array.
-    return { companies: parseCompanies(value), branding: defaultBranding };
+    return { companies: parseCompanies(value), branding: defaultBranding, layout: defaultLayout };
   }
   if (isRecord(value)) {
-    return { companies: parseCompanies(value.companies), branding: normalizeBranding(value.branding) };
+    return {
+      companies: parseCompanies(value.companies),
+      branding: normalizeBranding(value.branding),
+      layout: normalizeLayout(value.layout),
+    };
   }
-  return { companies: [], branding: defaultBranding };
+  return { companies: [], branding: defaultBranding, layout: defaultLayout };
 };
 
 export const fetchLatestDraw = async (): Promise<RemoteDraw | null> => {
@@ -76,7 +83,7 @@ export const fetchLatestDraw = async (): Promise<RemoteDraw | null> => {
 
   if (winnersError) throw winnersError;
 
-  const { companies, branding } = parseRosterPayload(run.roster);
+  const { companies, branding, layout } = parseRosterPayload(run.roster);
 
   return {
     runId: run.id,
@@ -87,6 +94,7 @@ export const fetchLatestDraw = async (): Promise<RemoteDraw | null> => {
     wallHeight: run.wall_height,
     roster: companies,
     branding,
+    layout,
     startedAt: run.started_at,
     winners: (rows ?? []).map((row) => ({
       companyId: row.company_id,
@@ -106,6 +114,7 @@ export const createDrawRun = async (draw: {
   wallHeight: number;
   roster: Company[];
   branding: Branding;
+  layout: Layout;
 }): Promise<string> => {
   const { data, error } = await supabase
     .from("award_wheel_runs")
@@ -116,7 +125,7 @@ export const createDrawRun = async (draw: {
       accent: draw.accent,
       wall_width: draw.wallWidth,
       wall_height: draw.wallHeight,
-      roster: { companies: draw.roster, branding: draw.branding } as unknown as Json,
+      roster: { companies: draw.roster, branding: draw.branding, layout: draw.layout } as unknown as Json,
     })
     .select("id")
     .single();

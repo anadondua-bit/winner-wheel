@@ -42,6 +42,27 @@ export const hexToHslTriplet = (hex: string): string | null => {
   return `${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 };
 
+/**
+ * Panel tints carry their own alpha instead of a hardcoded one baked into
+ * the stylesheet: `#RRGGBB` (alpha defaults to fully opaque) or an 8-digit
+ * `#RRGGBBAA`. Splits a stored value into the plain hex used for the color
+ * swatch and the 0–1 alpha used for the opacity slider.
+ */
+export const splitRgbaHex = (value: string): { hex: string; alpha: number } | null => {
+  const match = /^#?([0-9a-f]{6})([0-9a-f]{2})?$/i.exec(value.trim());
+  if (!match) return null;
+  const alpha = match[2] ? parseInt(match[2], 16) / 255 : 1;
+  return { hex: `#${match[1]}`, alpha };
+};
+
+/** Inverse of splitRgbaHex: combines a 6-digit hex and 0–1 alpha into one stored value. */
+export const joinRgbaHex = (hex: string, alpha: number): string => {
+  const match = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  const hex6 = match ? match[1] : "000000";
+  const alphaByte = clampByte(alpha * 255);
+  return `#${hex6}${alphaByte.toString(16).padStart(2, "0")}`;
+};
+
 export const hslTripletToHex = (triplet: string): string => {
   const match = /^(-?[\d.]+)\s+([\d.]+)%\s+([\d.]+)%$/.exec(triplet.trim());
   if (!match) return "#000000";

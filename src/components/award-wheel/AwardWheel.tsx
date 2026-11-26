@@ -18,6 +18,8 @@ type AwardWheelProps = {
   landedKey: number | null;
   /** How many of the 10 segment-color slots to cycle through. */
   segmentColorCount?: number;
+  /** For a second wheel on screen mirroring the real one — silences it so it doesn't also make noise. */
+  muted?: boolean;
 };
 
 /**
@@ -33,12 +35,13 @@ export const AwardWheel = ({
   winnerIndex,
   landedKey,
   segmentColorCount,
+  muted,
 }: AwardWheelProps) => {
   const [rotation, setRotation] = useState(() =>
     phase === "result" ? landingRotation(winnerIndex, companies.length) : 0,
   );
 
-  useWheelSpinSound({ phase, winnerIndex, companyCount: companies.length });
+  useWheelSpinSound({ phase, winnerIndex, companyCount: companies.length, muted });
 
   useEffect(() => {
     if (phase === "result" && winnerIndex >= 0) {
@@ -55,7 +58,10 @@ export const AwardWheel = ({
   const spinning = phase === "spinning";
 
   return (
-    <div className="relative aspect-square w-full max-w-[min(74vh,42vw)] max-lg:max-w-[min(62vh,86vw)]">
+    <div
+      className="relative aspect-square w-full max-w-[min(74vh,42vw)] max-lg:max-w-[min(62vh,86vw)]"
+      style={{ transform: "scale(var(--scale-wheel, 1))" }}
+    >
       <div
         aria-hidden="true"
         className={`absolute -inset-[9%] rounded-full opacity-80 blur-2xl wheel-ambient ${

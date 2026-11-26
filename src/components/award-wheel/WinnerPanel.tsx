@@ -1,4 +1,4 @@
-import type { DrawPhase, Winner } from "@/lib/wheel-types";
+import type { Branding, DrawPhase, Winner } from "@/lib/wheel-types";
 import { RevealFlourish } from "./RevealFlourish";
 
 type WinnerPanelProps = {
@@ -8,9 +8,15 @@ type WinnerPanelProps = {
   winner: Winner | null;
   /** Companies currently drawn on the wheel before the pending reveal. */
   companiesInPlay: number;
+  /** For the operator's custom wording on every fixed label here; omit to use the built-in words. */
+  branding?: Branding;
 };
 
 const pad = (value: number) => String(value).padStart(2, "0");
+
+/** Fills a "Draw {n} of {m}" style template with the actual numbers. */
+const fillTemplate = (template: string, n: string, m: string) =>
+  template.replace("{n}", n).replace("{m}", m);
 
 const formatTime = (iso: string) => {
   const date = new Date(iso);
@@ -20,6 +26,16 @@ const formatTime = (iso: string) => {
 
 const phaseDot = (tone: "live" | "idle" | "done") =>
   tone === "live" ? "live-dot" : tone === "done" ? "opacity-80" : "opacity-60";
+
+/** This panel's own text color, independently brandable from everything else on stage. */
+const panelText = (opacity?: number): { color: string } => ({
+  color: `hsl(var(--winner-panel-text, var(--stage-text, var(--brand-light)))${
+    opacity === undefined ? "" : ` / ${opacity}`
+  })`,
+});
+
+/** This element's own font, independently brandable; falls back to whatever its ancestor resolved to. */
+const fontVar = (cssVar: string): { fontFamily: string } => ({ fontFamily: `var(${cssVar}, inherit)` });
 
 const StatusPill = ({ tone, label }: { tone: "live" | "idle" | "done"; label: string }) => {
   const tones = {
@@ -31,7 +47,11 @@ const StatusPill = ({ tone, label }: { tone: "live" | "idle" | "done"; label: st
   return (
     <span
       className={`inline-flex items-center gap-[0.55em] rounded-full border px-[0.95em] py-[0.4em] font-semibold uppercase ${tones[tone]}`}
-      style={{ fontSize: "clamp(9px, 0.62vw, 15px)", letterSpacing: "0.24em" }}
+      style={{
+        fontSize: "clamp(9px, 0.62vw, 15px)",
+        letterSpacing: "0.24em",
+        ...fontVar("--font-winner-status"),
+      }}
     >
       <span
         className={`h-[0.5em] w-[0.5em] rounded-full bg-current ${phaseDot(tone)}`}
@@ -49,6 +69,7 @@ export const WinnerPanel = ({
   winnersCount,
   winner,
   companiesInPlay,
+  branding,
 }: WinnerPanelProps) => {
   const isResult = phase === "result" && winner !== null;
   const isSpinning = phase === "spinning";
@@ -56,18 +77,19 @@ export const WinnerPanel = ({
   const drawNo = isResult || isSpinning ? winnersCount : Math.min(winnersCount + 1, totalDraws);
 
   const status = isComplete
-    ? { tone: "done" as const, label: "Draw complete" }
+    ? { tone: "done" as const, label: branding?.winnerStatusCompleteLabel || "Draw complete" }
     : isResult
-      ? { tone: "live" as const, label: "Winner" }
+      ? { tone: "live" as const, label: branding?.winnerStatusWinnerLabel || "Winner" }
       : isSpinning
-        ? { tone: "idle" as const, label: "In play" }
+        ? { tone: "idle" as const, label: branding?.winnerStatusInPlayLabel || "In play" }
         : winnersCount === 0
-          ? { tone: "idle" as const, label: "Ready" }
-          : { tone: "idle" as const, label: "Next draw" };
+          ? { tone: "idle" as const, label: branding?.winnerStatusReadyLabel || "Ready" }
+          : { tone: "idle" as const, label: branding?.winnerStatusNextDrawLabel || "Next draw" };
 
   return (
     <section
       className="panel-glass panel-glass--winner relative flex min-h-0 flex-1 flex-col justify-between overflow-hidden rounded-[1.7rem] px-[2.1vw] py-[2.4vh] max-lg:px-6"
+      style={{ fontFamily: "var(--font-winner-panel, var(--font-sans))" }}
       aria-live="polite"
     >
       <span
@@ -78,10 +100,16 @@ export const WinnerPanel = ({
       <header className="flex flex-wrap items-center justify-between gap-3">
         <StatusPill tone={status.tone} label={status.label} />
         <span
-          className="tabular font-semibold text-brand-light/55"
-          style={{ fontSize: "clamp(10px, 0.78vw, 18px)", letterSpacing: "0.18em" }}
+          className="tabular font-semibold"
+          style={{
+            fontSize: "clamp(10px, 0.78vw, 18px)",
+            letterSpacing: "0.18em",
+            ...panelText(0.55),
+            ...fontVar("--font-draw-counter"),
+          }}
         >
-          DRAW {pad(drawNo)} <span className="text-brand-light/25">/</span> {pad(totalDraws)}
+          {branding?.drawCounterLabel || "DRAW"} {pad(drawNo)}{" "}
+          <span style={panelText(0.25)}>/</span> {pad(totalDraws)}
         </span>
       </header>
 
@@ -89,53 +117,69 @@ export const WinnerPanel = ({
         {isResult && winner ? (
           <div className="reveal-enter">
             <div className="mb-[1.4vh] h-[2px] w-[4.4vw] min-w-[46px] bg-gradient-to-r from-brand-mint to-transparent" />
-            <span className="eyebrow text-brand-mint/90">Winner · draw {pad(winner.draw)}</span>
+            <span className="eyebrow text-brand-mint/90" style={fontVar("--font-winner-eyebrow")}>
+              {branding?.eyebrowWinnerDrawLabel || "Winner · draw"} {pad(winner.draw)}
+            </span>
             <h1
               className={`display-name name-stamp mt-[1.1vh] break-words ${
                 winner.name.length > 22 ? "winner-name--long" : "winner-name"
               }`}
+              style={{ ...panelText(), ...fontVar("--font-winner-name") }}
             >
               {winner.name}
             </h1>
           </div>
         ) : isSpinning ? (
           <div className="reveal-enter">
-            <span className="eyebrow">
-              {winnersCount === 1 ? "The wheel is turning" : "Draw in progress"}
+            <span className="eyebrow" style={{ ...panelText(0.62), ...fontVar("--font-winner-eyebrow") }}>
+              {winnersCount === 1
+                ? branding?.eyebrowTurningLabel || "The wheel is turning"
+                : branding?.eyebrowInProgressLabel || "Draw in progress"}
             </span>
             <p
               className="display-name mt-[1.2vh]"
-              style={{ fontSize: "clamp(1.6rem, 3.4vw, 4.6rem)" }}
+              style={{ fontSize: "clamp(1.6rem, 3.4vw, 4.6rem)", ...panelText() }}
             >
               {companiesInPlay} companies
             </p>
-            <p className="mt-[1.2vh] text-brand-light/60" style={{ fontSize: "clamp(11px, 0.9vw, 22px)" }}>
+            <p className="mt-[1.2vh]" style={{ fontSize: "clamp(11px, 0.9vw, 22px)", ...panelText(0.6) }}>
               Still on the wheel for this draw.
             </p>
           </div>
         ) : isComplete ? (
           <div className="reveal-enter">
             <div className="mb-[1.4vh] h-[2px] w-[4.4vw] min-w-[46px] bg-gradient-to-r from-brand-blue to-transparent" />
-            <span className="eyebrow">Ceremony draw closed</span>
-            <h2 className="display-name mt-[1.1vh]" style={{ fontSize: "clamp(1.9rem, 3.9vw, 5.4rem)" }}>
+            <span className="eyebrow" style={{ ...panelText(0.62), ...fontVar("--font-winner-eyebrow") }}>
+              {branding?.eyebrowCeremonyClosedLabel || "Ceremony draw closed"}
+            </span>
+            <h2
+              className="display-name mt-[1.1vh]"
+              style={{ fontSize: "clamp(1.9rem, 3.9vw, 5.4rem)", ...panelText() }}
+            >
               All {totalDraws} winners announced
             </h2>
-            <p className="mt-[1.4vh] text-brand-light/65" style={{ fontSize: "clamp(11px, 0.92vw, 23px)" }}>
+            <p className="mt-[1.4vh]" style={{ fontSize: "clamp(11px, 0.92vw, 23px)", ...panelText(0.65) }}>
               {companiesInPlay} companies remain on the wheel.
             </p>
           </div>
         ) : (
           <div className="reveal-enter">
-            <span className="eyebrow">
-              {winnersCount === 0 ? "The wheel is set" : `Draw ${pad(drawNo)} of ${pad(totalDraws)}`}
+            <span className="eyebrow" style={{ ...panelText(0.62), ...fontVar("--font-winner-eyebrow") }}>
+              {winnersCount === 0
+                ? branding?.eyebrowWheelSetLabel || "The wheel is set"
+                : fillTemplate(
+                    branding?.eyebrowDrawOfLabel || "Draw {n} of {m}",
+                    pad(drawNo),
+                    pad(totalDraws),
+                  )}
             </span>
             <h2
               className="display-name mt-[1.1vh]"
-              style={{ fontSize: "clamp(1.8rem, 3.7vw, 5.1rem)" }}
+              style={{ fontSize: "clamp(1.8rem, 3.7vw, 5.1rem)", ...panelText() }}
             >
               {winnersCount === 0 ? "Let the draw begin" : "Ready for the next name"}
             </h2>
-            <p className="mt-[1.4vh] text-brand-light/65" style={{ fontSize: "clamp(11px, 0.92vw, 23px)" }}>
+            <p className="mt-[1.4vh]" style={{ fontSize: "clamp(11px, 0.92vw, 23px)", ...panelText(0.65) }}>
               {winnersCount === 0
                 ? `${companiesInPlay} companies on the wheel · ${totalDraws} winners to reveal`
                 : `${companiesInPlay} companies in play · ${totalDraws - winnersCount} reveals to go`}
@@ -146,8 +190,8 @@ export const WinnerPanel = ({
 
       <footer className="flex flex-wrap items-end justify-between gap-3 border-t border-brand-light/10 pt-[1.6vh]">
         <span
-          className="text-kicker text-brand-light/45"
-          style={{ fontSize: "clamp(8px, 0.6vw, 14px)" }}
+          className="text-kicker"
+          style={{ fontSize: "clamp(8px, 0.6vw, 14px)", ...panelText(0.45) }}
         >
           {isResult && winner
             ? `Revealed ${formatTime(winner.wonAt)}`
@@ -156,10 +200,14 @@ export const WinnerPanel = ({
               : "Main stage · live"}
         </span>
         <span
-          className="tabular font-semibold text-brand-light/70"
-          style={{ fontSize: "clamp(10px, 0.72vw, 17px)" }}
+          className="tabular font-semibold"
+          style={{
+            fontSize: "clamp(10px, 0.72vw, 17px)",
+            ...panelText(0.7),
+            ...fontVar("--font-revealed-counter"),
+          }}
         >
-          {winnersCount} / {totalDraws} REVEALED
+          {winnersCount} / {totalDraws} {branding?.revealedCounterLabel || "REVEALED"}
         </span>
       </footer>
 

@@ -41,6 +41,7 @@ export const useWheelMirror = () => {
             wallWidth: remote.wallWidth || fallback.config.wallWidth,
             wallHeight: remote.wallHeight || fallback.config.wallHeight,
             branding: remote.branding,
+            layout: remote.layout,
           },
           baseRoster: remote.roster.length ? remote.roster : fallback.baseRoster,
           winners,

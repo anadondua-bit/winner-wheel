@@ -44,11 +44,30 @@ export const WHEEL_PART_DEFAULT_HEX = {
   rimStart: "#25937D",
   rimEnd: "#0A1214",
   hub: "#CFDCDD",
-  pointer: "#E6F7F0",
   headerTitle: "#EEF2F2",
+  statusText: "#EEF2F2",
+  winnerPanelText: "#EEF2F2",
   stageText: "#EEF2F2",
   accentButtons: "#31B496",
   tintWinnerPanel: "#EAF4F2",
-  tintWinnersRail: "#E4F0F1",
   tintControlBar: "#E6F2F1",
+  // Fine chassis detail — each currently tracks a brand token (mint/ink/light/
+  // teal) at a fixed opacity; these defaults are that token's value under the
+  // default "teal" accent, purely for the picker's initial swatch. The real
+  // page keeps tracking the brand token until one of these is overridden
+  // (see the var()-with-fallback rules in index.css).
+  rimHalo: "#4BDDBB",
+  rimEdgeLight: "#EEF2F2",
+  rimEdgeDark: "#0A1214",
+  frameShadow: "#0A1214",
+  stud: "#EEF2F2",
+  studRing: "#0A1214",
+  studCore: "#4BDDBB",
+  hubRing: "#EEF2F2",
+  hubEdge: "#0A1214",
+  hubCore: "#25937D",
+  hubDot: "#EEF2F2",
+  hairline: "#0A1214",
+  labelBright: "#EEF2F2",
+  labelHalo: "#0A1214",
 } as const;

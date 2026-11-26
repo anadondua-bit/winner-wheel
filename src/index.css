@@ -70,19 +70,23 @@
     --winner-fill: 166 68% 58%; /* #4BDDBB */
     --winner-label: 162 38% 5%; /* #08120F */
 
-    /* Wheel chassis: rim gradient, hub, pointer */
+    /* Wheel chassis: rim gradient, hub. The pointer is a fixed silver finish (see WheelChassis.tsx), not brandable. */
     --rim-start: 168 60% 36%; /* #25937D */
     --rim-end: 192 33% 6%; /* #0A1214 */
     --hub: 184 17% 84%; /* #CFDCDD */
-    --pointer: 155 52% 94%; /* #E6F7F0 */
 
     /* Canvas text, independently editable from --brand-light even though it starts identical */
     --text-header-title: 180 14% 94%;
 
-    /* Panel tints — subtle hue shift mixed into the dark glass, not a literal background */
+    /* Panel tints — subtle hue shift mixed into the dark glass, not a literal background.
+       The -a1/-a2 pair are the two gradient-stop opacities; the RGBA picker's alpha channel
+       scales both together (branding JS sets them), these are just the fully-opaque default. */
     --tint-winner-panel: 168 31% 94%; /* #EAF4F2 */
-    --tint-winners-rail: 185 32% 92%; /* #E4F0F1 */
+    --tint-winner-panel-a1: 0.14;
+    --tint-winner-panel-a2: 0.04;
     --tint-control-bar: 175 32% 93%; /* #E6F2F1 */
+    --tint-control-bar-a1: 0.14;
+    --tint-control-bar-a2: 0.04;
 
     --stage-shadow: 0 40px 120px -40px hsl(var(--primary) / 0.55);
 
@@ -166,28 +170,27 @@
   .seg-fill-10 { fill: hsl(var(--seg-10)); }
   .seg-fill-winner { fill: hsl(var(--winner-fill)); }
 
-  .wheel-hairline { stroke: hsl(var(--brand-ink) / 0.5); }
-  .label-bright { fill: hsl(var(--brand-light) / 0.96); }
+  .wheel-hairline { stroke: hsl(var(--wheel-hairline, var(--brand-ink)) / 0.5); }
+  .label-bright { fill: hsl(var(--label-bright, var(--brand-light)) / 0.96); }
   .label-ink { fill: hsl(var(--winner-label)); }
-  .label-halo { stroke: hsl(var(--brand-ink) / 0.32); }
+  .label-halo { stroke: hsl(var(--label-halo, var(--brand-ink)) / 0.32); }
 
-  .rim-halo { stroke: hsl(var(--brand-mint) / 0.16); }
+  .rim-halo { stroke: hsl(var(--rim-halo, var(--brand-mint)) / 0.16); }
   .rim-surface { stroke: url(#rim-band); }
-  .rim-edge-light { stroke: hsl(var(--brand-light) / 0.5); }
-  .rim-edge-dark { stroke: hsl(var(--brand-ink) / 0.7); }
-  .seg-shadow { stroke: hsl(var(--brand-ink) / 0.32); }
+  .rim-edge-light { stroke: hsl(var(--rim-edge-light, var(--brand-light)) / 0.5); }
+  .rim-edge-dark { stroke: hsl(var(--rim-edge-dark, var(--brand-ink)) / 0.7); }
+  .seg-shadow { stroke: hsl(var(--frame-shadow, var(--brand-ink)) / 0.32); }
 
-  .stud-fill { fill: hsl(var(--brand-light) / 0.92); }
-  .stud-ring { stroke: hsl(var(--brand-ink) / 0.35); }
-  .stud-core { fill: hsl(var(--brand-mint)); }
+  .stud-fill { fill: hsl(var(--stud, var(--brand-light)) / 0.92); }
+  .stud-ring { stroke: hsl(var(--stud-ring, var(--brand-ink)) / 0.35); }
+  .stud-core { fill: hsl(var(--stud-core, var(--brand-mint))); }
 
   .hub-fill { fill: hsl(var(--hub)); }
-  .hub-ring { stroke: hsl(var(--brand-light) / 0.6); }
-  .hub-edge { stroke: hsl(var(--brand-ink) / 0.55); }
-  .hub-core { fill: hsl(var(--brand-teal)); }
-  .hub-dot { fill: hsl(var(--brand-light)); }
+  .hub-ring { stroke: hsl(var(--hub-ring, var(--brand-light)) / 0.6); }
+  .hub-edge { stroke: hsl(var(--hub-edge, var(--brand-ink)) / 0.55); }
+  .hub-core { fill: hsl(var(--hub-core, var(--brand-teal))); }
+  .hub-dot { fill: hsl(var(--hub-dot, var(--brand-light))); }
 
-  .pointer-fill { fill: hsl(var(--pointer)); }
   .pointer-edge { stroke: hsl(var(--brand-light) / 0.75); }
   .pointer-shade { fill: hsl(var(--brand-ink) / 0.18); }
 
@@ -391,18 +394,20 @@
     background:
       linear-gradient(
         160deg,
-        hsl(var(--tint-winner-panel) / 0.14) 0%,
-        hsl(var(--tint-winner-panel) / 0.04) 45%,
+        hsl(var(--tint-winner-panel) / var(--tint-winner-panel-a1)) 0%,
+        hsl(var(--tint-winner-panel) / var(--tint-winner-panel-a2)) 45%,
         hsl(var(--brand-ink) / 0.4) 100%
       );
   }
 
+  /* Fixed tint, not operator-editable: this box only ever exists in the command
+     center's own dashboard, never on the stage display the audience sees. */
   .panel-glass.panel-glass--winners-rail {
     background:
       linear-gradient(
         160deg,
-        hsl(var(--tint-winners-rail) / 0.14) 0%,
-        hsl(var(--tint-winners-rail) / 0.04) 45%,
+        hsl(185 32% 92% / 0.14) 0%,
+        hsl(185 32% 92% / 0.04) 45%,
         hsl(var(--brand-ink) / 0.4) 100%
       );
   }
@@ -411,8 +416,8 @@
     background:
       linear-gradient(
         160deg,
-        hsl(var(--tint-control-bar) / 0.14) 0%,
-        hsl(var(--tint-control-bar) / 0.04) 45%,
+        hsl(var(--tint-control-bar) / var(--tint-control-bar-a1)) 0%,
+        hsl(var(--tint-control-bar) / var(--tint-control-bar-a2)) 45%,
         hsl(var(--brand-ink) / 0.4) 100%
       );
   }

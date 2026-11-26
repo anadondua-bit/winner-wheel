@@ -1,9 +1,10 @@
 /**
- * Synthesized show audio — a sci-fi interface blip for each segment tick and
- * a clean rising chime for the reveal. No audio files: everything is a
+ * Synthesized show audio — a three-note tick cycle for the spin (lifted
+ * from a reference spinning-wheel recording's pitches, see playWheelTick)
+ * and a clean rising chime for the reveal. No audio files: everything is a
  * couple of oscillators shaped with gain/frequency envelopes, so it stays a
- * few hundred bytes and sounds digital rather than like a mechanical
- * wheel's wooden ratchet.
+ * few hundred bytes. The ticks are the only sound during the spin — no
+ * underlying hum or drone.
  */
 
 type AudioContextCtor = typeof AudioContext;
@@ -30,9 +31,24 @@ export const resumeWheelAudio = (): Promise<void> => {
 };
 
 /**
- * One short digital tick as a wheel segment passes the pointer. Pitch and
- * brightness scale with `intensity` (0–1, the wheel's instantaneous speed),
- * so the sound naturally brightens mid-spin and settles as it lands.
+ * The reference spinning-wheel recording ticks through the same three
+ * pitches throughout — G#4, C#5, G#4, D#5, repeating — rather than sweeping
+ * pitch with speed; it's the *tempo* of this fixed three-note cycle that
+ * tells you how fast the wheel is going, not its pitch. Walked forward one
+ * step per tick by `playWheelTick` below.
+ */
+const TICK_NOTES = [415.3, 551.2, 415.3, 622.3]; // G#4, C#5, G#4, D#5
+let tickStep = 0;
+
+/**
+ * One short arcade-style tick as a wheel segment passes the pointer,
+ * cycling through TICK_NOTES in order. A square wave — the classic 8-bit
+ * blip tone, not the softer triangle — with a near-instant on and a hard
+ * linear cutoff rather than a soft exponential tail, like old arcade
+ * hardware just gating the tone on and off. Loudness and length still
+ * scale with `intensity` (0–1, the wheel's instantaneous speed) so it
+ * settles as the spin lands, but — matching the reference — speed is read
+ * in how fast these ticks arrive, not in their pitch.
  */
 export const playWheelTick = (intensity: number): void => {
   const audio = getContext();
@@ -40,107 +56,35 @@ export const playWheelTick = (intensity: number): void => {
 
   const clamped = Math.min(1, Math.max(0, intensity));
   const now = audio.currentTime;
-  const freq = 1500 + clamped * 1500;
-  const duration = 0.026 + (1 - clamped) * 0.018;
+  const freq = TICK_NOTES[tickStep % TICK_NOTES.length];
+  tickStep += 1;
+  const duration = 0.03 + (1 - clamped) * 0.02;
+  const peak = 0.08 + clamped * 0.05;
 
   const osc = audio.createOscillator();
-  osc.type = "triangle";
+  osc.type = "square";
   osc.frequency.setValueAtTime(freq, now);
-  osc.frequency.exponentialRampToValueAtTime(Math.max(400, freq * 0.75), now + duration);
-
-  const filter = audio.createBiquadFilter();
-  filter.type = "highpass";
-  filter.frequency.value = 500;
 
   const gain = audio.createGain();
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(0.14 + clamped * 0.1, now + 0.004);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  gain.gain.setValueAtTime(peak, now);
+  gain.gain.setValueAtTime(peak, now + duration * 0.55);
+  gain.gain.linearRampToValueAtTime(0, now + duration);
 
-  osc.connect(filter);
-  filter.connect(gain);
+  osc.connect(gain);
   gain.connect(audio.destination);
 
   osc.start(now);
-  osc.stop(now + duration + 0.01);
-};
-
-export type SpinHumHandle = {
-  /** Call every frame with the wheel's current speed, 0–1. */
-  update: (intensity: number) => void;
-  stop: () => void;
-};
-
-/**
- * A continuous energetic hum under the ticks: two triangle waves a clean
- * perfect fifth apart, bright register, gentle filter — swept by speed so
- * it builds and settles with the spin. Deliberately avoids the classic
- * horror-film trick (two near-unison low tones beating against each
- * other) in favor of a consonant interval, so it reads as upbeat and
- * futuristic rather than ominous.
- */
-export const startSpinHum = (): SpinHumHandle | null => {
-  const audio = getContext();
-  if (!audio || audio.state !== "running") return null;
-
-  const now = audio.currentTime;
-
-  const oscA = audio.createOscillator();
-  oscA.type = "triangle";
-  oscA.frequency.setValueAtTime(220, now);
-
-  const oscB = audio.createOscillator();
-  oscB.type = "triangle";
-  oscB.frequency.setValueAtTime(330, now); // a perfect fifth above oscA
-
-  const filter = audio.createBiquadFilter();
-  filter.type = "lowpass";
-  filter.frequency.setValueAtTime(1400, now);
-  filter.Q.value = 0.7;
-
-  const gain = audio.createGain();
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(0.09, now + 0.12);
-
-  oscA.connect(filter);
-  oscB.connect(filter);
-  filter.connect(gain);
-  gain.connect(audio.destination);
-
-  oscA.start(now);
-  oscB.start(now);
-
-  let stopped = false;
-
-  const update = (intensity: number) => {
-    if (stopped) return;
-    const clamped = Math.min(1, Math.max(0, intensity));
-    const t = audio.currentTime;
-    const baseFreq = 220 + clamped * 260;
-    oscA.frequency.setTargetAtTime(baseFreq, t, 0.05);
-    oscB.frequency.setTargetAtTime(baseFreq * 1.5, t, 0.05); // keep the fifth locked at any speed
-    filter.frequency.setTargetAtTime(1200 + clamped * 3400, t, 0.06);
-    gain.gain.setTargetAtTime(0.045 + clamped * 0.075, t, 0.08);
-  };
-
-  const stop = () => {
-    if (stopped) return;
-    stopped = true;
-    const t = audio.currentTime;
-    gain.gain.cancelScheduledValues(t);
-    gain.gain.setTargetAtTime(0.0001, t, 0.09);
-    oscA.stop(t + 0.4);
-    oscB.stop(t + 0.4);
-  };
-
-  return { update, stop };
+  osc.stop(now + duration + 0.005);
 };
 
 /**
  * The winner reveal: a low sub-thump for weight, a rising four-note
  * arpeggio that lands on a held high note, and a bright filtered-noise
  * shimmer on top — a fuller, more triumphant "power-up" moment than a
- * plain two-note blip, still entirely synthesized.
+ * plain two-note blip, still entirely synthesized. The arpeggio — the
+ * actual tune — uses the same square-wave arcade voice as the spin ticks
+ * (hard on/off envelope, not a soft exponential fade), so the two halves
+ * of the show share one consistent synth character.
  */
 export const playWheelChime = (): void => {
   const audio = getContext();
@@ -162,22 +106,22 @@ export const playWheelChime = (): void => {
   thump.stop(now + 0.3);
 
   const notes: Array<[frequency: number, offset: number, gainPeak: number, duration: number]> = [
-    [523.25, 0, 0.16, 0.5],
-    [659.25, 0.075, 0.18, 0.5],
-    [783.99, 0.15, 0.2, 0.55],
-    [1046.5, 0.24, 0.27, 0.85],
+    [523.25, 0, 0.1, 0.5],
+    [659.25, 0.075, 0.11, 0.5],
+    [783.99, 0.15, 0.12, 0.55],
+    [1046.5, 0.24, 0.16, 0.85],
   ];
 
   notes.forEach(([frequency, offset, gainPeak, duration]) => {
     const start = now + offset;
     const osc = audio.createOscillator();
-    osc.type = "triangle";
+    osc.type = "square";
     osc.frequency.setValueAtTime(frequency, start);
 
     const gain = audio.createGain();
-    gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(gainPeak, start + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    gain.gain.setValueAtTime(gainPeak, start);
+    gain.gain.setValueAtTime(gainPeak, start + duration * 0.7);
+    gain.gain.linearRampToValueAtTime(0, start + duration);
 
     osc.connect(gain);
     gain.connect(audio.destination);

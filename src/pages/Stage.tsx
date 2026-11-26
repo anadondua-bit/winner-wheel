@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { AwardWheel } from "@/components/award-wheel/AwardWheel";
-import { StageBackdrop } from "@/components/award-wheel/StageBackdrop";
-import { StageHeader } from "@/components/award-wheel/StageHeader";
-import { WinnerPanel } from "@/components/award-wheel/WinnerPanel";
-import { WinnersList } from "@/components/award-wheel/WinnersList";
+import { StageCanvas } from "@/components/award-wheel/StageCanvas";
 import { useApplyBranding } from "@/hooks/use-apply-branding";
 import { useWheelMirror } from "@/hooks/use-wheel-mirror";
 import { resumeWheelAudio } from "@/lib/wheel-sound";
@@ -18,17 +14,7 @@ const Stage = () => {
   const wheel = useWheelMirror();
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const {
-    config,
-    winners,
-    phase,
-    wheelCompanies,
-    pendingWinner,
-    winnerIndex,
-    status,
-  } = wheel;
-
-  useApplyBranding(config.branding);
+  useApplyBranding(wheel.config.branding);
 
   const toggleFullscreen = useCallback(async () => {
     try {
@@ -75,61 +61,18 @@ const Stage = () => {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [toggleFullscreen]);
 
-  // A drawn name must not appear in the list before the wheel has landed on it.
-  const revealedWinners = phase === "spinning" ? winners.slice(0, -1) : winners;
-  const landedKey = phase === "result" && pendingWinner ? pendingWinner.draw : null;
-
   return (
-    <div
-      className="relative h-full w-full overflow-hidden bg-background"
-      data-accent={config.accent}
-    >
-      <StageBackdrop imageUrl={config.branding.backgroundDataUrl ?? undefined} />
-
-      <div className="relative z-10 flex h-full w-full items-center justify-center p-[1.8vh] max-lg:p-0">
-        <div
-          className="flex h-full flex-col gap-[1.7vh] max-lg:gap-4 max-lg:overflow-y-auto max-lg:px-4 max-lg:py-4"
-          style={{
-            aspectRatio: `${config.wallWidth} / ${config.wallHeight}`,
-            maxWidth: "100%",
-          }}
-        >
-          <StageHeader
-            title={config.title}
-            subtitle={config.subtitle}
-            companiesInPlay={wheelCompanies.length}
-            totalCompanies={wheel.baseRoster.length}
-            signal={status}
-            isFullscreen={isFullscreen}
-            onEnterFullscreen={() => void toggleFullscreen()}
-            logoUrl={config.branding.logoDataUrl ?? undefined}
-          />
-
-          <main className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.03fr)_minmax(0,1fr)] items-stretch gap-[2.2vw] max-lg:grid-cols-1 max-lg:items-start max-lg:gap-5">
-            <div className="flex min-h-0 items-center justify-center">
-              <AwardWheel
-                companies={wheelCompanies}
-                phase={phase}
-                winnerIndex={winnerIndex}
-                landedKey={landedKey}
-                segmentColorCount={config.branding.segmentColorCount}
-              />
-            </div>
-
-            <div className="flex min-h-0 flex-col justify-center gap-[1.6vh] max-lg:w-full">
-              <WinnerPanel
-                phase={phase}
-                totalDraws={config.totalDraws}
-                winnersCount={winners.length}
-                winner={pendingWinner}
-                companiesInPlay={wheelCompanies.length}
-              />
-              <WinnersList winners={revealedWinners} totalDraws={config.totalDraws} />
-            </div>
-          </main>
-        </div>
-      </div>
-    </div>
+    <StageCanvas
+      config={wheel.config}
+      winners={wheel.winners}
+      phase={wheel.phase}
+      wheelCompanies={wheel.wheelCompanies}
+      pendingWinner={wheel.pendingWinner}
+      winnerIndex={wheel.winnerIndex}
+      signal={wheel.status}
+      isFullscreen={isFullscreen}
+      onEnterFullscreen={() => void toggleFullscreen()}
+    />
   );
 };
 

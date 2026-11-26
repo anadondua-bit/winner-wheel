@@ -4,6 +4,7 @@ import type {
   AccentName,
   Branding,
   Company,
+  Layout,
   SaveStatus,
   WheelConfig,
   Winner,
@@ -47,6 +48,7 @@ export type RemoteAdoption = {
   wallWidth: number;
   wallHeight: number;
   branding: Branding;
+  layout: Layout;
 };
 
 type Params = {
@@ -115,6 +117,7 @@ export const useDrawSync = ({
             wallWidth: remote.wallWidth,
             wallHeight: remote.wallHeight,
             branding: remote.branding,
+            layout: remote.layout,
             roster:
               remote.roster.length >= configRef.current.totalDraws
                 ? remote.roster
@@ -172,6 +175,7 @@ export const useDrawSync = ({
             wallWidth: configRef.current.wallWidth,
             wallHeight: configRef.current.wallHeight,
             branding: configRef.current.branding,
+            layout: configRef.current.layout,
             roster: rosterRef.current,
           });
           runIdRef.current = runId;
@@ -187,6 +191,52 @@ export const useDrawSync = ({
       }
     })();
   }, [winners, ready, retryTick]);
+
+  // Keeps the record's title/branding/roster current after a mid-show
+  // change — otherwise it stays frozen at whatever it was when the run was
+  // first created, and a new device joining fresh (no local cache yet)
+  // would adopt that stale snapshot. The tables only allow insert, never
+  // update (by design — see the migration), so a changed title or logo
+  // can't be written into the existing row; instead this starts a new run
+  // with the current winners carried forward, which naturally becomes the
+  // latest one `fetchLatestDraw` picks up. Skips the very first time this
+  // runs after load (that's just the existing run loading, not a change).
+  const didInitRef = useRef(false);
+  const migratingRef = useRef(false);
+  useEffect(() => {
+    if (!ready) return;
+    if (!didInitRef.current) {
+      didInitRef.current = true;
+      return;
+    }
+    if (busyRef.current || migratingRef.current) return;
+    const runId = runIdRef.current;
+    if (!runId) return;
+
+    migratingRef.current = true;
+    void (async () => {
+      try {
+        const newRunId = await createDrawRun({
+          title: config.title,
+          subtitle: config.subtitle,
+          accent: config.accent,
+          wallWidth: config.wallWidth,
+          wallHeight: config.wallHeight,
+          branding: config.branding,
+          layout: config.layout,
+          roster: baseRoster,
+        });
+        await appendWinners(newRunId, winnersRef.current);
+        runIdRef.current = newRunId;
+        writeRunId(newRunId);
+        syncedRef.current = winnersRef.current.length;
+      } catch {
+        /* best-effort; the next config or roster change retries naturally */
+      } finally {
+        migratingRef.current = false;
+      }
+    })();
+  }, [config, baseRoster, ready]);
 
   // Retry quietly while the show continues.
   useEffect(() => {

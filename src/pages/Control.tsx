@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CommandHeader } from "@/components/command-center/CommandHeader";
 import { DrawActionCard } from "@/components/command-center/DrawActionCard";
+import { StagePreview } from "@/components/command-center/StagePreview";
 import { StatTile } from "@/components/command-center/StatTile";
 import { WinnersLedger } from "@/components/command-center/WinnersLedger";
 import { RosterDialog } from "@/components/award-wheel/RosterDialog";
@@ -87,6 +88,15 @@ const Control = () => {
           canAdvance={wheel.canAdvance}
           onSpin={wheel.startSpin}
           onAdvance={wheel.advance}
+        />
+
+        <StagePreview
+          config={wheel.config}
+          winners={wheel.winners}
+          phase={wheel.phase}
+          wheelCompanies={wheel.wheelCompanies}
+          pendingWinner={wheel.pendingWinner}
+          winnerIndex={wheel.winnerIndex}
         />
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

@@ -1,18 +1,22 @@
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FONT_PRESETS } from "@/lib/wheel-fonts";
 import { createRosterRow } from "@/lib/wheel-roster";
 import type { RosterRowDraft } from "@/lib/wheel-roster";
+import type { FontChoice } from "@/lib/wheel-types";
 
 type RosterTableProps = {
   rows: RosterRowDraft[];
   onChange: (rows: RosterRowDraft[]) => void;
   disabled?: boolean;
+  /** Whether a custom font has been uploaded, so "Custom" can be offered per row. */
+  hasCustomFont?: boolean;
 };
 
 /** One editable row per company — the "objects, not a text blob" view of the roster. */
-export const RosterTable = ({ rows, onChange, disabled }: RosterTableProps) => {
-  const updateRow = (rowKey: string, patch: Partial<Pick<RosterRowDraft, "name" | "short">>) => {
+export const RosterTable = ({ rows, onChange, disabled, hasCustomFont }: RosterTableProps) => {
+  const updateRow = (rowKey: string, patch: Partial<Pick<RosterRowDraft, "name" | "short" | "font">>) => {
     onChange(rows.map((row) => (row.rowKey === rowKey ? { ...row, ...patch } : row)));
   };
 
@@ -26,12 +30,15 @@ export const RosterTable = ({ rows, onChange, disabled }: RosterTableProps) => {
 
   return (
     <div className="grid gap-2">
-      <div className="grid grid-cols-[1fr_minmax(0,9rem)_2rem] gap-2 px-1">
+      <div className="grid grid-cols-[1fr_minmax(0,9rem)_minmax(0,7.5rem)_2rem] gap-2 px-1">
         <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-light/40">
           Full name
         </span>
         <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-light/40">
           Short (on wheel)
+        </span>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-light/40">
+          Font
         </span>
         <span aria-hidden="true" />
       </div>
@@ -40,7 +47,7 @@ export const RosterTable = ({ rows, onChange, disabled }: RosterTableProps) => {
         {rows.map((row, index) => (
           <div
             key={row.rowKey}
-            className={`grid grid-cols-[1fr_minmax(0,9rem)_2rem] items-center gap-2 px-2 py-1.5 ${
+            className={`grid grid-cols-[1fr_minmax(0,9rem)_minmax(0,7.5rem)_2rem] items-center gap-2 px-2 py-1.5 ${
               index % 2 === 1 ? "bg-brand-light/[0.025]" : ""
             }`}
           >
@@ -58,6 +65,23 @@ export const RosterTable = ({ rows, onChange, disabled }: RosterTableProps) => {
               disabled={disabled}
               className="h-9 border-brand-light/12 bg-brand-ink/40 text-center text-[13px] uppercase text-brand-light"
             />
+            <select
+              value={row.font ?? ""}
+              onChange={(event) =>
+                updateRow(row.rowKey, { font: (event.target.value || null) as FontChoice | null })
+              }
+              disabled={disabled}
+              aria-label={`${row.name || "Company"} font`}
+              className="h-9 rounded-md border border-brand-light/12 bg-brand-ink/40 px-1.5 text-[12px] text-brand-light disabled:opacity-50"
+            >
+              <option value="">Default</option>
+              {FONT_PRESETS.map((preset) => (
+                <option key={preset.id} value={preset.id}>
+                  {preset.label}
+                </option>
+              ))}
+              {hasCustomFont ? <option value="custom">Custom</option> : null}
+            </select>
             <button
               type="button"
               onClick={() => removeRow(row.rowKey)}
