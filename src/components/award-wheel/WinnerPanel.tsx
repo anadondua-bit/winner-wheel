@@ -197,8 +197,9 @@ export const WinnerPanel = ({
                 ...fontVar("--font-body-headline"),
               }}
             >
-              {fillTemplate(branding?.bodyHeadlineSpinningLabel || "{n} companies", {
+              {fillTemplate(branding?.bodyHeadlineSpinningLabel || "{m} draws left", {
                 n: String(companiesInPlay),
+                m: String(totalDraws - winnersCount),
               })}
             </p>
             <p

@@ -224,7 +224,7 @@ const COMPONENT_FONT_FIELDS: Array<{
     colorKey: "bodyHeadlineColor",
     colorDefaultHex: "#EEF2F2",
     textFields: [
-      { key: "bodyHeadlineSpinningLabel", label: "Spinning ({n})", placeholder: "{n} companies" },
+      { key: "bodyHeadlineSpinningLabel", label: "Spinning ({m})", placeholder: "{m} draws left" },
       { key: "bodyHeadlineCompleteLabel", label: "All done ({n})", placeholder: "All {n} winners announced" },
       { key: "bodyHeadlineFirstLabel", label: "Before first draw", placeholder: "Let the draw begin" },
       { key: "bodyHeadlineNextLabel", label: "Between draws", placeholder: "Ready for the next name" },

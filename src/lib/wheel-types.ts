@@ -116,7 +116,7 @@ export type Branding = {
   footerCaptionCompleteLabel: string | null;
   /** Shown whenever there's no winner yet and the draw isn't finished (idle or spinning). */
   footerCaptionLiveLabel: string | null;
-  /** Template with `{n}`, how many companies are still on the wheel for this draw. */
+  /** Template with `{m}` (draws left after this one) and `{n}` (companies still on the wheel for this draw). */
   bodyHeadlineSpinningLabel: string | null;
   /** Template with `{n}`, the total number of draws. */
   bodyHeadlineCompleteLabel: string | null;
