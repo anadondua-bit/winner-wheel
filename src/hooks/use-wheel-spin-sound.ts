@@ -15,6 +15,11 @@ type Params = {
   companyCount: number;
   /** Skips every sound call — for a second wheel on screen (e.g. the command center's mini preview) that mirrors the real one and must not also make noise. */
   muted?: boolean;
+  /** How much of the spin had already run, in ms, by the time this client
+   * found out about it (a late or catch-up broadcast) — shifts the tick
+   * schedule back so it still lands in sync with what's on screen instead
+   * of replaying a full spin's worth of ticks out of step. */
+  elapsedMs?: number;
 };
 
 /**
@@ -26,7 +31,13 @@ type Params = {
  * transitions the wheel itself goes through, so the two stay in lockstep
  * without sharing state.
  */
-export const useWheelSpinSound = ({ phase, winnerIndex, companyCount, muted }: Params): void => {
+export const useWheelSpinSound = ({
+  phase,
+  winnerIndex,
+  companyCount,
+  muted,
+  elapsedMs = 0,
+}: Params): void => {
   const angleRef = useRef(0);
   const planRef = useRef<{ start: number; target: number; startedAt: number } | null>(null);
   const boundaryRef = useRef(0);
@@ -42,13 +53,19 @@ export const useWheelSpinSound = ({ phase, winnerIndex, companyCount, muted }: P
       const start = angleRef.current;
       const target = spinTargetRotation(winnerIndex, companyCount);
       angleRef.current = target;
+      if (elapsedMs >= SPIN_DURATION_MS) {
+        // Already finished turning in real time by the time this client
+        // heard about it — nothing left to tick through.
+        planRef.current = null;
+        return;
+      }
       boundaryRef.current = Math.floor(start / segmentSpan(companyCount));
-      planRef.current = { start, target, startedAt: performance.now() };
+      planRef.current = { start, target, startedAt: performance.now() - elapsedMs };
       return;
     }
     angleRef.current = 0;
     planRef.current = null;
-  }, [phase, winnerIndex, companyCount, muted]);
+  }, [phase, winnerIndex, companyCount, muted, elapsedMs]);
 
   useEffect(() => {
     if (phase !== "spinning" || muted) return undefined;

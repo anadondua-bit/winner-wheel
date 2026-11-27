@@ -79,6 +79,7 @@ const StageDemo = () => {
       wheelCompanies={wheel.wheelCompanies}
       pendingWinner={wheel.pendingWinner}
       winnerIndex={wheel.winnerIndex}
+      phaseChangedAt={wheel.phaseChangedAt}
       signal="live"
       isFullscreen={isFullscreen}
       onEnterFullscreen={() => void toggleFullscreen()}

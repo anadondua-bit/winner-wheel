@@ -9,6 +9,7 @@ type StagePreviewProps = {
   wheelCompanies: Company[];
   pendingWinner: Winner | null;
   winnerIndex: number;
+  phaseChangedAt?: string | null;
 };
 
 /**
@@ -28,6 +29,7 @@ export const StagePreview = ({
   wheelCompanies,
   pendingWinner,
   winnerIndex,
+  phaseChangedAt,
 }: StagePreviewProps) => (
   <section className="panel-glass rounded-[1.4rem] p-3">
     <div className="mb-2.5 flex items-center justify-between px-1">
@@ -50,6 +52,7 @@ export const StagePreview = ({
           wheelCompanies={wheelCompanies}
           pendingWinner={pendingWinner}
           winnerIndex={winnerIndex}
+          phaseChangedAt={phaseChangedAt}
           signal="live"
           isFullscreen
           muted

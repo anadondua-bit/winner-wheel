@@ -20,6 +20,8 @@ type StageCanvasProps = {
   wheelCompanies: Company[];
   pendingWinner: Winner | null;
   winnerIndex: number;
+  /** When `phase` last changed — passed through to the wheel so a mirrored client can time a late-heard spin off real elapsed time. */
+  phaseChangedAt?: string | null;
   signal?: "live" | "connecting" | "offline";
   isFullscreen?: boolean;
   onEnterFullscreen?: () => void;
@@ -41,6 +43,7 @@ export const StageCanvas = ({
   wheelCompanies,
   pendingWinner,
   winnerIndex,
+  phaseChangedAt,
   signal,
   isFullscreen,
   onEnterFullscreen,
@@ -84,6 +87,7 @@ export const StageCanvas = ({
                 landedKey={landedKey}
                 segmentColorCount={config.branding.segmentColorCount}
                 muted={muted}
+                phaseChangedAt={phaseChangedAt}
               />
             </div>
 

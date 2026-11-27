@@ -226,6 +226,11 @@ export type DrawState = {
   baseRoster: Company[];
   winners: Winner[];
   phase: DrawPhase;
+  /** When `phase` last changed, as an ISO timestamp. Lets a client that
+   * hears about a spin late (a slow connection, a catch-up broadcast)
+   * animate only the real time still remaining instead of a full fresh
+   * spin starting from whenever the message happened to arrive. */
+  phaseChangedAt: string;
 };
 
 export type RosterParseResult = {

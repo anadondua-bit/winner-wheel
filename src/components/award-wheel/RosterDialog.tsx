@@ -56,6 +56,7 @@ type RosterDialogProps = {
   wheelCompanies: Company[];
   pendingWinner: Winner | null;
   winnerIndex: number;
+  phaseChangedAt?: string | null;
 };
 
 const fieldLabel = "text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-light/45";
@@ -94,6 +95,7 @@ export const RosterDialog = ({
   wheelCompanies,
   pendingWinner,
   winnerIndex,
+  phaseChangedAt,
 }: RosterDialogProps) => {
   const [title, setTitle] = useState(config.title);
   const [subtitle, setSubtitle] = useState(config.subtitle);
@@ -508,6 +510,7 @@ export const RosterDialog = ({
                 wheelCompanies={wheelCompanies}
                 pendingWinner={pendingWinner}
                 winnerIndex={winnerIndex}
+                phaseChangedAt={phaseChangedAt}
               />
             </div>
           ) : null}

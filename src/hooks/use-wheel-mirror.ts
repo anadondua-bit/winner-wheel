@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { deriveWheelView } from "@/lib/wheel-derive";
 import { fetchLatestDraw } from "@/lib/wheel-cloud";
-import { LIVE_STATE_EVENT, openLiveChannel } from "@/lib/wheel-live";
+import {
+  LIVE_STATE_EVENT,
+  mergeLiveStatePayload,
+  openLiveChannel,
+  type LiveStatePayload,
+} from "@/lib/wheel-live";
 import { createInitialState } from "@/lib/wheel-roster";
 import { supabase } from "@/integrations/supabase/client";
 import type { AccentName, DrawState } from "@/lib/wheel-types";
@@ -51,6 +56,7 @@ export const useWheelMirror = () => {
           // just landed, so this snapshot only ever resolves to idle/complete
           // and waits for the next broadcast to know if a result is on screen.
           phase: winners.length >= fallback.config.totalDraws ? "complete" : "idle",
+          phaseChangedAt: new Date().toISOString(),
         });
       } catch {
         /* the live channel is the primary path; a failed initial fetch just delays first paint */
@@ -68,7 +74,7 @@ export const useWheelMirror = () => {
     channel
       .on("broadcast", { event: LIVE_STATE_EVENT }, ({ payload }) => {
         gotLiveStateRef.current = true;
-        setState(payload as DrawState);
+        setState((prev) => mergeLiveStatePayload(prev, payload as LiveStatePayload));
         setStatus("live");
       })
       .subscribe((subscribeStatus) => {
@@ -95,6 +101,7 @@ export const useWheelMirror = () => {
     baseRoster: state.baseRoster,
     winners: state.winners,
     phase: state.phase,
+    phaseChangedAt: state.phaseChangedAt,
     status,
     ...derived,
   };

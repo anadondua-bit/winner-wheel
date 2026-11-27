@@ -194,6 +194,7 @@ export const createInitialState = (): DrawState => ({
   baseRoster: sampleRoster.map((company) => ({ ...company })),
   winners: [],
   phase: "idle",
+  phaseChangedAt: new Date().toISOString(),
 });
 
 /** One company per line: "Full Company Name | SHORT NAME" */

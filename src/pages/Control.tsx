@@ -36,8 +36,9 @@ const Control = () => {
       baseRoster: wheel.baseRoster,
       winners: wheel.winners,
       phase: wheel.phase,
+      phaseChangedAt: wheel.phaseChangedAt,
     }),
-    [wheel.config, wheel.baseRoster, wheel.winners, wheel.phase],
+    [wheel.config, wheel.baseRoster, wheel.winners, wheel.phase, wheel.phaseChangedAt],
   );
   useWheelBroadcast(liveState, setBroadcastStatus);
 
@@ -97,6 +98,7 @@ const Control = () => {
           wheelCompanies={wheel.wheelCompanies}
           pendingWinner={wheel.pendingWinner}
           winnerIndex={wheel.winnerIndex}
+          phaseChangedAt={wheel.phaseChangedAt}
         />
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -127,6 +129,7 @@ const Control = () => {
         wheelCompanies={wheel.wheelCompanies}
         pendingWinner={wheel.pendingWinner}
         winnerIndex={wheel.winnerIndex}
+        phaseChangedAt={wheel.phaseChangedAt}
       />
     </div>
   );

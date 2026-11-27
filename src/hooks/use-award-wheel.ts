@@ -85,6 +85,11 @@ const normalizeState = (raw: unknown): DrawState => {
   if (phase === "complete" && winners.length < fallback.config.totalDraws) phase = "idle";
   if (phase !== "result" && winners.length >= fallback.config.totalDraws) phase = "complete";
 
+  const phaseChangedAt =
+    typeof raw.phaseChangedAt === "string" && !Number.isNaN(Date.parse(raw.phaseChangedAt))
+      ? raw.phaseChangedAt
+      : fallback.phaseChangedAt;
+
   return {
     config: {
       title,
@@ -99,6 +104,7 @@ const normalizeState = (raw: unknown): DrawState => {
     baseRoster,
     winners,
     phase,
+    phaseChangedAt,
   };
 };
 
@@ -121,6 +127,8 @@ export type AwardWheelApi = {
   baseRoster: Company[];
   winners: Winner[];
   phase: DrawPhase;
+  /** When `phase` last changed; lets a mirrored client time the spin off real elapsed time instead of whenever it heard about it. */
+  phaseChangedAt: string;
   /** Companies still to be drawn (winner removed after the reveal is advanced). */
   remaining: Company[];
   /** Companies currently drawn on the wheel, including a pending winner. */
@@ -186,6 +194,7 @@ export const useAwardWheel = (): AwardWheelApi => {
       ...current,
       phase: "spinning",
       winners: [...current.winners, winner],
+      phaseChangedAt: new Date().toISOString(),
     };
     stateRef.current = next;
     setState(next);
@@ -194,7 +203,7 @@ export const useAwardWheel = (): AwardWheelApi => {
   const landSpin = useCallback(() => {
     const current = stateRef.current;
     if (current.phase !== "spinning") return;
-    const next: DrawState = { ...current, phase: "result" };
+    const next: DrawState = { ...current, phase: "result", phaseChangedAt: new Date().toISOString() };
     stateRef.current = next;
     setState(next);
   }, []);
@@ -211,7 +220,11 @@ export const useAwardWheel = (): AwardWheelApi => {
     const current = stateRef.current;
     if (current.phase !== "result") return;
     const finished = current.winners.length >= current.config.totalDraws;
-    const next: DrawState = { ...current, phase: finished ? "complete" : "idle" };
+    const next: DrawState = {
+      ...current,
+      phase: finished ? "complete" : "idle",
+      phaseChangedAt: new Date().toISOString(),
+    };
     stateRef.current = next;
     setState(next);
   }, []);
@@ -278,6 +291,7 @@ export const useAwardWheel = (): AwardWheelApi => {
         baseRoster: draw.roster,
         winners,
         phase,
+        phaseChangedAt: new Date().toISOString(),
       };
       stateRef.current = next;
       setState(next);
@@ -287,7 +301,12 @@ export const useAwardWheel = (): AwardWheelApi => {
 
   const resetDraw = useCallback(() => {
     const current = stateRef.current;
-    const next: DrawState = { ...current, winners: [], phase: "idle" };
+    const next: DrawState = {
+      ...current,
+      winners: [],
+      phase: "idle",
+      phaseChangedAt: new Date().toISOString(),
+    };
     stateRef.current = next;
     setState(next);
   }, []);
@@ -299,6 +318,7 @@ export const useAwardWheel = (): AwardWheelApi => {
     baseRoster: state.baseRoster,
     winners: state.winners,
     phase: state.phase,
+    phaseChangedAt: state.phaseChangedAt,
     startSpin,
     landSpin,
     advance,

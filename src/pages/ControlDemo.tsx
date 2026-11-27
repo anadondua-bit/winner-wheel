@@ -73,6 +73,7 @@ const ControlDemo = () => {
           wheelCompanies={wheel.wheelCompanies}
           pendingWinner={wheel.pendingWinner}
           winnerIndex={wheel.winnerIndex}
+          phaseChangedAt={wheel.phaseChangedAt}
         />
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -103,6 +104,7 @@ const ControlDemo = () => {
         wheelCompanies={wheel.wheelCompanies}
         pendingWinner={wheel.pendingWinner}
         winnerIndex={wheel.winnerIndex}
+        phaseChangedAt={wheel.phaseChangedAt}
       />
     </div>
   );
