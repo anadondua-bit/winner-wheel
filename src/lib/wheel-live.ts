@@ -1,17 +1,17 @@
-import { supabase } from "@/integrations/supabase/client";
+import { io, type Socket } from "socket.io-client";
 import type { Branding, DrawState, WheelConfig } from "./wheel-types";
 
 /**
- * One fixed broadcast channel for the whole show. The command center is the
- * only writer; the stage display (and any other viewer) only ever listens.
- * This is a direct websocket hop — independent of the Supabase-backed show
- * record, which remains the durable copy a late-joining or refreshed stage
+ * One Socket.IO connection to the local server (see server/index.ts), which
+ * just relays whatever one client sends to every other connected client —
+ * the command center is the only writer; the stage display (and any other
+ * viewer) only ever listens. Independent of the REST-backed show record,
+ * which remains the durable copy a late-joining or refreshed stage
  * recovers from.
  */
-export const LIVE_CHANNEL_NAME = "award-wheel:main-stage";
 export const LIVE_STATE_EVENT = "state";
 /**
- * Sent by a listener (the stage display) the moment it (re)subscribes, so a
+ * Sent by a listener (the stage display) the moment it connects, so a
  * refresh or a late join gets the live phase immediately instead of
  * waiting for the command center's next unrelated change — which, if the
  * operator is just sitting on a result with nothing moving, might not
@@ -19,16 +19,16 @@ export const LIVE_STATE_EVENT = "state";
  */
 export const LIVE_REQUEST_EVENT = "request-state";
 
-export const openLiveChannel = () => supabase.channel(LIVE_CHANNEL_NAME);
+export const openLiveSocket = (): Socket => io({ path: "/socket.io" });
 
 /**
  * Branding fields big enough (inline data URLs for the logo, the
  * background and a custom font — each up to a few MB) that resending them
- * on every single state change can saturate the broadcast channel and
- * delay the small, time-critical spin/result messages behind them. The
- * wire payload below omits one of these whenever its value hasn't changed
- * since the last successful send; the receiving end fills the gap back in
- * from whatever it already has.
+ * on every single state change can saturate the socket and delay the
+ * small, time-critical spin/result messages behind them. The wire payload
+ * below omits one of these whenever its value hasn't changed since the
+ * last successful send; the receiving end fills the gap back in from
+ * whatever it already has.
  */
 export const HEAVY_BRANDING_KEYS = [
   "logoDataUrl",
@@ -45,12 +45,12 @@ export type LiveStatePayload = Omit<DrawState, "config"> & {
 };
 
 /**
- * Builds the wire payload for one broadcast send. `lastSent` is the
- * sender's running record of what it last actually transmitted for each
- * heavy field, mutated in place as a side effect. `full` forces every
- * heavy field to be included regardless of whether it changed — used
- * right after (re)subscribing, so a freshly (re)connected listener always
- * gets a complete snapshot to start from.
+ * Builds the wire payload for one send. `lastSent` is the sender's running
+ * record of what it last actually transmitted for each heavy field,
+ * mutated in place as a side effect. `full` forces every heavy field to be
+ * included regardless of whether it changed — used right after connecting,
+ * so a freshly (re)connected listener always gets a complete snapshot to
+ * start from.
  */
 export const buildLiveStatePayload = (
   state: DrawState,

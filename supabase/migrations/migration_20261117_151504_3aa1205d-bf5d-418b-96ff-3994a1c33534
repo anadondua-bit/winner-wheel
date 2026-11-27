@@ -1,8 +1,0 @@
-alter table public.award_wheel_runs
-  add column accent text not null default 'teal',
-  add column wall_width integer not null default 2304,
-  add column wall_height integer not null default 1280;
-
-alter table public.award_wheel_runs
-  add constraint award_wheel_runs_wall_size_check
-  check (wall_width between 320 and 7680 and wall_height between 200 and 4320);

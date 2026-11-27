@@ -1,12 +1,10 @@
 /**
  * Uploaded assets become data URLs that ride inside the show record (a
- * jsonb column, no object storage configured) and inside every realtime
- * broadcast to the stage display — every field combined, on every change.
- * Supabase Realtime caps a single broadcast message at 256 KB on the Free
- * plan and 3,000 KB on Pro+ (this project runs on Pro+, since the old
- * combined logo+background+font cap already exceeded 256 KB). These caps
- * keep base64-inflated (~1.33x) logo + background + font + roster/winners
- * comfortably under that 3,000 KB ceiling, with headroom to spare.
+ * SQLite row, no object storage configured) and inside the live socket
+ * sync to the stage display — though only the fields that actually
+ * changed get resent there (see `buildLiveStatePayload`), not every field
+ * on every change. These caps just keep a single upload sane; they're not
+ * sized against any external service's message-size ceiling anymore.
  */
 export const MAX_LOGO_BYTES = 300 * 1024;
 export const MAX_BACKGROUND_BYTES = 1200 * 1024;

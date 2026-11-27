@@ -14,8 +14,8 @@ dist-demo
 reports
 *.local
 
-# Supabase CLI
-supabase/.temp
+# Local show-record database (server/db.ts) — runtime data, not source
+server/data
 
 # Editor directories and files
 .vscode/*

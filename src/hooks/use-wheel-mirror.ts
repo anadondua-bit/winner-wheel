@@ -5,11 +5,10 @@ import {
   LIVE_REQUEST_EVENT,
   LIVE_STATE_EVENT,
   mergeLiveStatePayload,
-  openLiveChannel,
+  openLiveSocket,
   type LiveStatePayload,
 } from "@/lib/wheel-live";
 import { createInitialState } from "@/lib/wheel-roster";
-import { supabase } from "@/integrations/supabase/client";
 import type { AccentName, DrawState } from "@/lib/wheel-types";
 
 export type MirrorStatus = "connecting" | "live" | "offline";
@@ -20,13 +19,13 @@ const toAccent = (value: unknown): AccentName =>
 /**
  * Read-only reflection of the draw for the stage display: an initial
  * snapshot from the show record (so a refreshed or late-joining screen
- * isn't blank), then every subsequent change over the same realtime
- * channel the command center broadcasts on. The show record has no notion
- * of the live-only phase (idle/spinning/result), so that initial snapshot
- * can only ever guess idle/complete — this hook asks the command center
- * for its actual current state the moment it (re)connects, so a refresh
- * mid-result doesn't sit showing "ready to draw" until something else
- * happens to change there.
+ * isn't blank), then every subsequent change over the same local
+ * Socket.IO connection the command center broadcasts on. The show record
+ * has no notion of the live-only phase (idle/spinning/result), so that
+ * initial snapshot can only ever guess idle/complete — this hook asks the
+ * command center for its actual current state the moment it connects, so
+ * a refresh mid-result doesn't sit showing "ready to draw" until something
+ * else happens to change there.
  */
 export const useWheelMirror = () => {
   const [state, setState] = useState<DrawState>(createInitialState);
@@ -65,7 +64,7 @@ export const useWheelMirror = () => {
           phaseChangedAt: new Date().toISOString(),
         });
       } catch {
-        /* the live channel is the primary path; a failed initial fetch just delays first paint */
+        /* the live socket is the primary path; a failed initial fetch just delays first paint */
       }
     })();
 
@@ -75,31 +74,24 @@ export const useWheelMirror = () => {
   }, []);
 
   useEffect(() => {
-    const channel = openLiveChannel();
+    const socket = openLiveSocket();
 
-    channel
-      .on("broadcast", { event: LIVE_STATE_EVENT }, ({ payload }) => {
-        gotLiveStateRef.current = true;
-        setState((prev) => mergeLiveStatePayload(prev, payload as LiveStatePayload));
-        setStatus("live");
-      })
-      .subscribe((subscribeStatus) => {
-        if (subscribeStatus === "SUBSCRIBED") {
-          setStatus("live");
-          // Ask whoever's running the command center for its current state
-          // right now, instead of waiting for its next unrelated change.
-          void channel.send({ type: "broadcast", event: LIVE_REQUEST_EVENT, payload: {} });
-        } else if (
-          subscribeStatus === "CHANNEL_ERROR" ||
-          subscribeStatus === "TIMED_OUT" ||
-          subscribeStatus === "CLOSED"
-        ) {
-          setStatus("offline");
-        }
-      });
+    socket.on(LIVE_STATE_EVENT, (payload: LiveStatePayload) => {
+      gotLiveStateRef.current = true;
+      setState((prev) => mergeLiveStatePayload(prev, payload));
+      setStatus("live");
+    });
+    socket.on("connect", () => {
+      setStatus("live");
+      // Ask whoever's running the command center for its current state
+      // right now, instead of waiting for its next unrelated change.
+      socket.emit(LIVE_REQUEST_EVENT);
+    });
+    socket.on("disconnect", () => setStatus("offline"));
+    socket.on("connect_error", () => setStatus("offline"));
 
     return () => {
-      void supabase.removeChannel(channel);
+      socket.close();
     };
   }, []);
 

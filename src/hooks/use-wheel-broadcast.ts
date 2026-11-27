@@ -3,16 +3,15 @@ import {
   LIVE_REQUEST_EVENT,
   LIVE_STATE_EVENT,
   buildLiveStatePayload,
-  openLiveChannel,
+  openLiveSocket,
 } from "@/lib/wheel-live";
-import { supabase } from "@/integrations/supabase/client";
 import type { DrawState } from "@/lib/wheel-types";
 
 export type BroadcastStatus = "connecting" | "live" | "offline";
 
 /**
- * Pushes every draw change to the stage display over a realtime broadcast
- * channel. Fire-and-forget: the command center stays authoritative and
+ * Pushes every draw change to the stage display over a local Socket.IO
+ * connection. Fire-and-forget: the command center stays authoritative and
  * keeps running even if nothing is listening on the other end.
  *
  * Heavy branding assets (logo/background/custom-font data URLs) are only
@@ -23,15 +22,15 @@ export type BroadcastStatus = "connecting" | "live" | "offline";
  * `buildLiveStatePayload`.
  *
  * Also answers a stage display's `LIVE_REQUEST_EVENT` (sent the moment it
- * (re)subscribes — a refresh, a late join) with a full, undiffed snapshot,
- * so it doesn't have to wait for the next unrelated change here to find
- * out the live phase.
+ * connects — a refresh, a late join) with a full, undiffed snapshot, so it
+ * doesn't have to wait for the next unrelated change here to find out the
+ * live phase.
  */
 export const useWheelBroadcast = (
   state: DrawState,
   onStatus?: (status: BroadcastStatus) => void,
 ): void => {
-  const channelRef = useRef<ReturnType<typeof openLiveChannel> | null>(null);
+  const socketRef = useRef<ReturnType<typeof openLiveSocket> | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
   const onStatusRef = useRef(onStatus);
@@ -39,45 +38,31 @@ export const useWheelBroadcast = (
   const lastSentHeavyRef = useRef<Partial<Record<"logoDataUrl" | "backgroundDataUrl" | "customFontDataUrl", string | null>>>({});
 
   useEffect(() => {
-    const channel = openLiveChannel();
-    channelRef.current = channel;
+    const socket = openLiveSocket();
+    socketRef.current = socket;
 
-    channel.on("broadcast", { event: LIVE_REQUEST_EVENT }, () => {
-      void channel.send({
-        type: "broadcast",
-        event: LIVE_STATE_EVENT,
-        payload: buildLiveStatePayload(stateRef.current, lastSentHeavyRef.current, true),
-      });
+    socket.on(LIVE_REQUEST_EVENT, () => {
+      socket.emit(LIVE_STATE_EVENT, buildLiveStatePayload(stateRef.current, lastSentHeavyRef.current, true));
     });
 
-    channel.subscribe((status) => {
-      if (status === "SUBSCRIBED") {
-        // Resend the current snapshot the moment the socket is ready, since
-        // any send attempted before this point may have been dropped. A
-        // fresh subscription means whoever's listening has no baseline yet,
-        // so this one send is always the full, undiffed state.
-        void channel.send({
-          type: "broadcast",
-          event: LIVE_STATE_EVENT,
-          payload: buildLiveStatePayload(stateRef.current, lastSentHeavyRef.current, true),
-        });
-        onStatusRef.current?.("live");
-      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-        onStatusRef.current?.("offline");
-      }
+    socket.on("connect", () => {
+      // Resend the current snapshot the moment the socket is ready, since
+      // any send attempted before this point may have been dropped. A
+      // fresh connection means whoever's listening has no baseline yet, so
+      // this one send is always the full, undiffed state.
+      socket.emit(LIVE_STATE_EVENT, buildLiveStatePayload(stateRef.current, lastSentHeavyRef.current, true));
+      onStatusRef.current?.("live");
     });
+    socket.on("disconnect", () => onStatusRef.current?.("offline"));
+    socket.on("connect_error", () => onStatusRef.current?.("offline"));
 
     return () => {
-      void supabase.removeChannel(channel);
-      channelRef.current = null;
+      socket.close();
+      socketRef.current = null;
     };
   }, []);
 
   useEffect(() => {
-    void channelRef.current?.send({
-      type: "broadcast",
-      event: LIVE_STATE_EVENT,
-      payload: buildLiveStatePayload(state, lastSentHeavyRef.current, false),
-    });
+    socketRef.current?.emit(LIVE_STATE_EVENT, buildLiveStatePayload(state, lastSentHeavyRef.current, false));
   }, [state]);
 };

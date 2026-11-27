@@ -1,21 +1,16 @@
-import { supabase } from "@/integrations/supabase/client";
-import type { Json } from "@/integrations/supabase/types";
-import { defaultBranding, defaultLayout } from "./wheel-roster";
 import { normalizeBranding, normalizeLayout, toFontChoiceOrNull } from "./wheel-normalize";
 import type { Branding, Company, Layout, Winner } from "./wheel-types";
 
 /**
- * Durable show record. Runs and winners are append-only: a reset starts a new
- * run instead of deleting history, and every result is written before the
- * reveal is advanced.
+ * Durable show record, kept by the local server (see server/index.ts) in a
+ * SQLite file — no cloud dependency. Runs and winners are append-only: a
+ * reset starts a new run instead of deleting history, and every result is
+ * written before the reveal is advanced.
  *
- * There's no object storage wired up for this project, so uploaded branding
- * (logo, background, custom font) rides along as data URLs inside the same
- * `roster` jsonb column the company list already used — no schema change.
- * The column holds `{ companies, branding }` now instead of a bare array;
- * `parseRosterPayload` still reads old rows that are just the bare array.
+ * There's no object storage wired up for this project, so uploaded
+ * branding (logo, background, custom font) rides along as data URLs
+ * inside the same roster payload the company list already used.
  */
-const STAGE_KEY = "main-stage";
 
 export type RemoteDraw = {
   runId: string;
@@ -31,10 +26,10 @@ export type RemoteDraw = {
   startedAt: string;
 };
 
-const isRecord = (value: unknown): value is Record<string, Json | undefined> =>
+const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const parseCompanies = (value: Json | undefined): Company[] => {
+const parseCompanies = (value: unknown): Company[] => {
   if (!Array.isArray(value)) return [];
   return value.flatMap((entry) => {
     if (!isRecord(entry)) return [];
@@ -44,64 +39,43 @@ const parseCompanies = (value: Json | undefined): Company[] => {
   });
 };
 
-const parseRosterPayload = (
-  value: Json,
-): { companies: Company[]; branding: Branding; layout: Layout } => {
-  if (Array.isArray(value)) {
-    // Legacy shape, from before branding existed: a bare company array.
-    return { companies: parseCompanies(value), branding: defaultBranding, layout: defaultLayout };
-  }
-  if (isRecord(value)) {
-    return {
-      companies: parseCompanies(value.companies),
-      branding: normalizeBranding(value.branding),
-      layout: normalizeLayout(value.layout),
-    };
-  }
-  return { companies: [], branding: defaultBranding, layout: defaultLayout };
-};
+type RemoteDrawResponse = {
+  runId: string;
+  title: string;
+  subtitle: string;
+  accent: string;
+  wallWidth: number;
+  wallHeight: number;
+  roster: unknown;
+  branding: unknown;
+  layout: unknown;
+  startedAt: string;
+  winners: Array<{ companyId: string; name: string; short: string; draw: number; wonAt: string }>;
+} | null;
 
 export const fetchLatestDraw = async (): Promise<RemoteDraw | null> => {
-  const { data: run, error } = await supabase
-    .from("award_wheel_runs")
-    .select(
-      "id, event_title, event_subtitle, accent, wall_width, wall_height, roster, started_at",
-    )
-    .eq("stage_key", STAGE_KEY)
-    .order("started_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw error;
-  if (!run) return null;
-
-  const { data: rows, error: winnersError } = await supabase
-    .from("award_wheel_winners")
-    .select("company_id, company_name, short_name, draw_number, won_at")
-    .eq("run_id", run.id)
-    .order("draw_number", { ascending: true });
-
-  if (winnersError) throw winnersError;
-
-  const { companies, branding, layout } = parseRosterPayload(run.roster);
+  const res = await fetch("/api/draw/latest");
+  if (!res.ok) throw new Error(`fetchLatestDraw failed: ${res.status}`);
+  const data = (await res.json()) as RemoteDrawResponse;
+  if (!data) return null;
 
   return {
-    runId: run.id,
-    title: run.event_title,
-    subtitle: run.event_subtitle,
-    accent: run.accent,
-    wallWidth: run.wall_width,
-    wallHeight: run.wall_height,
-    roster: companies,
-    branding,
-    layout,
-    startedAt: run.started_at,
-    winners: (rows ?? []).map((row) => ({
-      companyId: row.company_id,
-      name: row.company_name,
-      short: row.short_name,
-      draw: row.draw_number,
-      wonAt: row.won_at,
+    runId: data.runId,
+    title: data.title,
+    subtitle: data.subtitle,
+    accent: data.accent,
+    wallWidth: data.wallWidth,
+    wallHeight: data.wallHeight,
+    roster: parseCompanies(data.roster),
+    branding: normalizeBranding(data.branding),
+    layout: normalizeLayout(data.layout),
+    startedAt: data.startedAt,
+    winners: data.winners.map((winner) => ({
+      companyId: winner.companyId,
+      name: winner.name,
+      short: winner.short,
+      draw: winner.draw,
+      wonAt: winner.wonAt,
     })),
   };
 };
@@ -116,21 +90,13 @@ export const createDrawRun = async (draw: {
   branding: Branding;
   layout: Layout;
 }): Promise<string> => {
-  const { data, error } = await supabase
-    .from("award_wheel_runs")
-    .insert({
-      stage_key: STAGE_KEY,
-      event_title: draw.title,
-      event_subtitle: draw.subtitle,
-      accent: draw.accent,
-      wall_width: draw.wallWidth,
-      wall_height: draw.wallHeight,
-      roster: { companies: draw.roster, branding: draw.branding, layout: draw.layout } as unknown as Json,
-    })
-    .select("id")
-    .single();
-
-  if (error) throw error;
+  const res = await fetch("/api/draw/runs", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(draw),
+  });
+  if (!res.ok) throw new Error(`createDrawRun failed: ${res.status}`);
+  const data = (await res.json()) as { id: string };
   return data.id;
 };
 
@@ -139,35 +105,26 @@ export type StageCommand = "start" | "close";
 /**
  * One-row remote control for the physical stage display: a small helper
  * running on the stage machine polls this row and launches or closes the
- * kiosk browser window in response. Decoupled from the live broadcast
- * channel on purpose — that channel is for in-page state, this is for a
- * machine that isn't running any of this app's JS yet when it needs to
- * hear "open".
+ * kiosk browser window in response. Decoupled from the live socket on
+ * purpose — that's for in-page state, this is for a machine that isn't
+ * running any of this app's JS yet when it needs to hear "open".
  */
 export const sendStageCommand = async (command: StageCommand): Promise<void> => {
-  const { error } = await supabase
-    .from("award_wheel_commands")
-    .upsert(
-      { stage_key: STAGE_KEY, command, requested_at: new Date().toISOString() },
-      { onConflict: "stage_key" },
-    );
-  if (error) throw error;
+  const res = await fetch("/api/stage-command", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ command }),
+  });
+  if (!res.ok) throw new Error(`sendStageCommand failed: ${res.status}`);
 };
 
 export const appendWinners = async (runId: string, winners: Winner[]): Promise<void> => {
   if (!winners.length) return;
 
-  const { error } = await supabase.from("award_wheel_winners").upsert(
-    winners.map((winner) => ({
-      run_id: runId,
-      company_id: winner.companyId,
-      company_name: winner.name,
-      short_name: winner.short,
-      draw_number: winner.draw,
-      won_at: winner.wonAt,
-    })),
-    { onConflict: "run_id,draw_number", ignoreDuplicates: true },
-  );
-
-  if (error) throw error;
+  const res = await fetch(`/api/draw/runs/${encodeURIComponent(runId)}/winners`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ winners }),
+  });
+  if (!res.ok) throw new Error(`appendWinners failed: ${res.status}`);
 };

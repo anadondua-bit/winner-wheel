@@ -10,8 +10,9 @@ import { useAwardWheel } from "@/hooks/use-award-wheel";
 
 /**
  * Standalone demo build of the command center: the exact same local draw
- * engine as the real page, minus the Supabase broadcast/show-record sync —
- * so this works as a single offline file with no backend. Not the page
+ * engine as the real page, minus the socket broadcast/show-record sync to
+ * the local server — so this works as a single offline file with no
+ * backend. Not the page
  * served at /control; see main-demo-control.tsx for the entry that mounts
  * this instead.
  */

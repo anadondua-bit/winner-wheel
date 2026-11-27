@@ -3,8 +3,9 @@ import type { AccentName, Branding, FontChoice, Layout } from "./wheel-types";
 
 /**
  * Shared, defensive parsing for anything that can arrive as loosely-typed
- * data: localStorage JSON, a Supabase jsonb column, or an imported settings
- * CSV. One copy of "what counts as a valid X" instead of three.
+ * data: localStorage JSON, a row from the local show-record server, or an
+ * imported settings CSV. One copy of "what counts as a valid X" instead of
+ * three.
  */
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
