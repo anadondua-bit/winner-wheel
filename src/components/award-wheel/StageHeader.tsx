@@ -1,13 +1,9 @@
-import { Maximize } from "lucide-react";
 import type { Branding } from "@/lib/wheel-types";
 
 type StageHeaderProps = {
   subtitle: string;
   /** Connection to the command center; omit when this page has no remote link. */
   signal?: "live" | "connecting" | "offline";
-  /** Hidden once the page is already fullscreen — omit entirely to never show it. */
-  isFullscreen?: boolean;
-  onEnterFullscreen?: () => void;
   logoUrl?: string;
   /** For the operator's custom wording on the status label; omit to use the built-in words. */
   branding?: Branding;
@@ -23,8 +19,6 @@ const SIGNAL_COPY_DEFAULTS: Record<NonNullable<StageHeaderProps["signal"]>, stri
 export const StageHeader = ({
   subtitle,
   signal = "live",
-  isFullscreen,
-  onEnterFullscreen,
   logoUrl,
   branding,
 }: StageHeaderProps) => {
@@ -67,23 +61,6 @@ export const StageHeader = ({
           {signalLabel}
         </span>
       </div>
-
-      {!isFullscreen && onEnterFullscreen ? (
-        <button
-          type="button"
-          onClick={onEnterFullscreen}
-          title="Full screen (F)"
-          aria-label="Enter full screen"
-          className="grid shrink-0 place-items-center rounded-full border border-brand-light/15 bg-brand-ink/25 text-brand-light/70 backdrop-blur transition-colors hover:bg-brand-ink/50 hover:text-brand-light"
-          style={{
-            height: "calc(var(--scale-status, 1) * clamp(26px, 3vh, 40px))",
-            width: "calc(var(--scale-status, 1) * clamp(26px, 3vh, 40px))",
-            fontSize: "calc(var(--scale-status, 1) * clamp(26px, 3vh, 40px))",
-          }}
-        >
-          <Maximize className="h-[0.4em] w-[0.4em]" aria-hidden="true" />
-        </button>
-      ) : null}
 
       {!logoUrl ? (
         <div className="flex items-center gap-[0.7vw]">

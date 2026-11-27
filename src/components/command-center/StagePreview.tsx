@@ -54,7 +54,6 @@ export const StagePreview = ({
           winnerIndex={winnerIndex}
           phaseChangedAt={phaseChangedAt}
           signal="live"
-          isFullscreen
           muted
         />
       </div>

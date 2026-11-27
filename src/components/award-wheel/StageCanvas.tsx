@@ -23,14 +23,12 @@ type StageCanvasProps = {
   /** When `phase` last changed — passed through to the wheel so a mirrored client can time a late-heard spin off real elapsed time. */
   phaseChangedAt?: string | null;
   signal?: "live" | "connecting" | "offline";
-  isFullscreen?: boolean;
-  onEnterFullscreen?: () => void;
   /** For a second canvas on screen mirroring the real one — silences its wheel so it doesn't also make noise. */
   muted?: boolean;
 };
 
 /**
- * The exact LED-wall canvas: backdrop, header (logo/signal/fullscreen) and
+ * The exact LED-wall canvas: backdrop, header (logo/signal) and
  * the wheel + winner panel + event title. The real /stage page and any
  * preview of it (e.g. the command center's mini mirror) both render this
  * same component, with no caller-specific tweaks, so they can't
@@ -45,8 +43,6 @@ export const StageCanvas = ({
   winnerIndex,
   phaseChangedAt,
   signal,
-  isFullscreen,
-  onEnterFullscreen,
   muted,
 }: StageCanvasProps) => {
   const landedKey = phase === "result" && pendingWinner ? pendingWinner.draw : null;
@@ -72,8 +68,6 @@ export const StageCanvas = ({
           <StageHeader
             subtitle={config.subtitle}
             signal={signal}
-            isFullscreen={isFullscreen}
-            onEnterFullscreen={onEnterFullscreen}
             logoUrl={config.branding.logoDataUrl ?? undefined}
             branding={config.branding}
           />
