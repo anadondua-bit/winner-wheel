@@ -10,7 +10,10 @@
     "check": "pnpm lint && pnpm exec tsc --noEmit",
     "lint": "eslint .",
     "preview": "vite preview",
-    "pInstall": "pnpm install"
+    "pInstall": "pnpm install",
+    "db:login": "npx -y supabase login",
+    "db:link": "npx -y supabase link --project-ref jolly-vetch-42de6bea",
+    "db:push": "npx -y supabase db push"
   },
   "dependencies": {
     "@enter-pro/analytics-sdk": "^0.0.10",
