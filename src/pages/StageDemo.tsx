@@ -6,6 +6,18 @@ import { useAwardWheel } from "@/hooks/use-award-wheel";
 import { resumeWheelAudio } from "@/lib/wheel-sound";
 
 /**
+ * Chrome's --kiosk flag hides the address bar/toolbar/menubar just like
+ * the Fullscreen API does, but it isn't the Fullscreen API — this page
+ * never sees a `fullscreenchange` event for it, so `document.fullscreenElement`
+ * stays null and the "enter fullscreen" button would otherwise show up on
+ * top of an already-fullscreen kiosk window. `window.locationbar.visible`
+ * reliably reports false in both cases, so it's used here as a one-time
+ * check for "is there any browser chrome left to hide at all".
+ */
+const isChromeHidden = (): boolean =>
+  typeof window !== "undefined" && window.locationbar?.visible === false;
+
+/**
  * Standalone demo build of the stage display. The real /stage page is a
  * read-only mirror driven by the command center over a broadcast channel;
  * this build has no command center to mirror, so it runs its own local draw
@@ -18,7 +30,7 @@ import { resumeWheelAudio } from "@/lib/wheel-sound";
  */
 const StageDemo = () => {
   const wheel = useAwardWheel();
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(isChromeHidden);
 
   const { config, canSpin, canAdvance, startSpin, advance } = wheel;
 

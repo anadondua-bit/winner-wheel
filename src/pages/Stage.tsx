@@ -6,13 +6,25 @@ import { useWheelMirror } from "@/hooks/use-wheel-mirror";
 import { resumeWheelAudio } from "@/lib/wheel-sound";
 
 /**
+ * Chrome's --kiosk flag hides the address bar/toolbar/menubar just like
+ * the Fullscreen API does, but it isn't the Fullscreen API — this page
+ * never sees a `fullscreenchange` event for it, so `document.fullscreenElement`
+ * stays null and the "enter fullscreen" button would otherwise show up on
+ * top of an already-fullscreen kiosk window. `window.locationbar.visible`
+ * (and friends) reliably reports false in both cases, so it's used here as
+ * a one-time check for "is there any browser chrome left to hide at all".
+ */
+const isChromeHidden = (): boolean =>
+  typeof window !== "undefined" && window.locationbar?.visible === false;
+
+/**
  * The LED wall: a read-only mirror of the draw, driven live from the
  * command center. No buttons, no roster editor — this page only renders
  * whatever state arrives.
  */
 const Stage = () => {
   const wheel = useWheelMirror();
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(isChromeHidden);
 
   useApplyBranding(wheel.config.branding);
 
