@@ -14,7 +14,11 @@
     "db:login": "npx -y supabase login",
     "db:link": "npx -y supabase link --project-ref jolly-vetch-42de6bea",
     "db:push": "npx -y supabase db push --remote",
-    "db:push:dry-run": "npx -y supabase db push --remote --dry-run"
+    "db:push:dry-run": "npx -y supabase db push --remote --dry-run",
+    "db:start": "npx -y supabase start",
+    "db:stop": "npx -y supabase stop",
+    "db:status": "npx -y supabase status",
+    "db:reset": "npx -y supabase db reset"
   },
   "dependencies": {
     "@enter-pro/analytics-sdk": "^0.0.10",
