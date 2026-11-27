@@ -29,6 +29,19 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    // `vite preview` serves the built dist/ folder (see `npm run start`) —
+    // same port and proxy as the dev server, so a built run behaves exactly
+    // like `npm run dev` from the tunnel's point of view.
+    preview: {
+      port: 8080,
+      proxy: {
+        "/api": "http://localhost:4000",
+        "/socket.io": {
+          target: "http://localhost:4000",
+          ws: true,
+        },
+      },
+    },
     plugins: plugins.filter(Boolean) as PluginOption[],
     resolve: {
       alias: {

@@ -12,6 +12,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "pInstall": "pnpm install",
+    "start": "npm run build:prod && concurrently -n server,preview -c green,blue \"tsx server/index.ts\" \"vite preview\"",
     "stage:target": "pwsh scripts/windows-stage/stage-target.ps1",
     "stage:watch": "pwsh scripts/windows-stage/stage-watcher.ps1"
   },
