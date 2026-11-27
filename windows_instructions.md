@@ -17,18 +17,20 @@ tunnel, no other machine involved.
   have it: `winget install Microsoft.PowerShell`. Without it, use
   `powershell.exe` (built into Windows) with the exact same commands below —
   just swap `pwsh` for `powershell`.
-- This repo on the machine (`git clone`, or copy the folder over), with
-  `npm install` already run once.
+- This repo on the machine (`git clone`, or copy the folder over).
 
 ## Start the app
 
 **Easiest:** double-click `start-show.bat` in the repo's root folder. It
-builds the app and runs it with the backend, all in one window.
+builds the app and runs it with the backend, all in one window — the first
+time, it'll also run `npm install` automatically if dependencies aren't
+there yet (so that first run takes a minute or two longer).
 
-Or from a terminal, in the repo folder: `npm run start` (same thing), or
-`npm run dev` for the dev server instead (auto-reloads on changes, handy
-while testing). Either way it serves on `http://localhost:8080`. Leave
-whichever one you used running for the whole show.
+Or from a terminal, in the repo folder: `npm install` once, then `npm run
+start` (same thing), or `npm run dev` for the dev server instead
+(auto-reloads on changes, handy while testing). Either way it serves on
+`http://localhost:8080`. Leave whichever one you used running for the whole
+show.
 
 Open Control in a normal Chrome window on the operator's own screen:
 
@@ -84,6 +86,10 @@ event.
 
 ## If something's not working
 
+- **"'vite' is not recognized as an internal or external command"** —
+  dependencies aren't installed. `start-show.bat` now does this
+  automatically, but if you're running `npm run start`/`dev` by hand, run
+  `npm install` in the repo folder first.
 - **"Couldn't find chrome.exe"** — pass `-ChromePath` explicitly to
   `stage-watcher.ps1`, pointing at your actual Chrome install.
 - **"No target monitor saved yet"** — run `stage-target.ps1` first.
