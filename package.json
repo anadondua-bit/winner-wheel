@@ -13,7 +13,8 @@
     "pInstall": "pnpm install",
     "db:login": "npx -y supabase login",
     "db:link": "npx -y supabase link --project-ref jolly-vetch-42de6bea",
-    "db:push": "npx -y supabase db push"
+    "db:push": "npx -y supabase db push --remote",
+    "db:push:dry-run": "npx -y supabase db push --remote --dry-run"
   },
   "dependencies": {
     "@enter-pro/analytics-sdk": "^0.0.10",
