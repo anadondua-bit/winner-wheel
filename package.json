@@ -13,8 +13,8 @@
     "preview": "vite preview",
     "pInstall": "pnpm install",
     "start": "npm run build:prod && concurrently -n server,preview -c green,blue \"tsx server/index.ts\" \"vite preview\"",
-    "stage:target": "pwsh scripts/windows-stage/stage-target.ps1",
-    "stage:watch": "pwsh scripts/windows-stage/stage-watcher.ps1"
+    "stage:target": "powershell -ExecutionPolicy Bypass -File scripts/windows-stage/stage-target.ps1",
+    "stage:watch": "powershell -ExecutionPolicy Bypass -File scripts/windows-stage/stage-watcher.ps1"
   },
   "dependencies": {
     "@enter-pro/analytics-sdk": "^0.0.10",
