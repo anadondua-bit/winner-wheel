@@ -3300,6 +3300,24 @@ export type Database = {
         }
         Relationships: []
       }
+      award_wheel_commands: {
+        Row: {
+          command: string
+          requested_at: string
+          stage_key: string
+        }
+        Insert: {
+          command: string
+          requested_at?: string
+          stage_key?: string
+        }
+        Update: {
+          command?: string
+          requested_at?: string
+          stage_key?: string
+        }
+        Relationships: []
+      }
       award_wheel_winners: {
         Row: {
           company_id: string

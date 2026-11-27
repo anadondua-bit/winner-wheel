@@ -10,6 +10,14 @@ import type { Branding, DrawState, WheelConfig } from "./wheel-types";
  */
 export const LIVE_CHANNEL_NAME = "award-wheel:main-stage";
 export const LIVE_STATE_EVENT = "state";
+/**
+ * Sent by a listener (the stage display) the moment it (re)subscribes, so a
+ * refresh or a late join gets the live phase immediately instead of
+ * waiting for the command center's next unrelated change — which, if the
+ * operator is just sitting on a result with nothing moving, might not
+ * come for a while. The command center answers with a full `state` send.
+ */
+export const LIVE_REQUEST_EVENT = "request-state";
 
 export const openLiveChannel = () => supabase.channel(LIVE_CHANNEL_NAME);
 

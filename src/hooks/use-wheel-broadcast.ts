@@ -1,5 +1,10 @@
 import { useEffect, useRef } from "react";
-import { LIVE_STATE_EVENT, buildLiveStatePayload, openLiveChannel } from "@/lib/wheel-live";
+import {
+  LIVE_REQUEST_EVENT,
+  LIVE_STATE_EVENT,
+  buildLiveStatePayload,
+  openLiveChannel,
+} from "@/lib/wheel-live";
 import { supabase } from "@/integrations/supabase/client";
 import type { DrawState } from "@/lib/wheel-types";
 
@@ -16,6 +21,11 @@ export type BroadcastStatus = "connecting" | "live" | "offline";
  * unchanged image/font data over the socket every time, which is enough to
  * delay or drop the small, time-critical phase message behind it. See
  * `buildLiveStatePayload`.
+ *
+ * Also answers a stage display's `LIVE_REQUEST_EVENT` (sent the moment it
+ * (re)subscribes — a refresh, a late join) with a full, undiffed snapshot,
+ * so it doesn't have to wait for the next unrelated change here to find
+ * out the live phase.
  */
 export const useWheelBroadcast = (
   state: DrawState,
@@ -31,6 +41,14 @@ export const useWheelBroadcast = (
   useEffect(() => {
     const channel = openLiveChannel();
     channelRef.current = channel;
+
+    channel.on("broadcast", { event: LIVE_REQUEST_EVENT }, () => {
+      void channel.send({
+        type: "broadcast",
+        event: LIVE_STATE_EVENT,
+        payload: buildLiveStatePayload(stateRef.current, lastSentHeavyRef.current, true),
+      });
+    });
 
     channel.subscribe((status) => {
       if (status === "SUBSCRIBED") {

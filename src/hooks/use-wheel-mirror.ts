@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { deriveWheelView } from "@/lib/wheel-derive";
 import { fetchLatestDraw } from "@/lib/wheel-cloud";
 import {
+  LIVE_REQUEST_EVENT,
   LIVE_STATE_EVENT,
   mergeLiveStatePayload,
   openLiveChannel,
@@ -20,7 +21,12 @@ const toAccent = (value: unknown): AccentName =>
  * Read-only reflection of the draw for the stage display: an initial
  * snapshot from the show record (so a refreshed or late-joining screen
  * isn't blank), then every subsequent change over the same realtime
- * channel the command center broadcasts on.
+ * channel the command center broadcasts on. The show record has no notion
+ * of the live-only phase (idle/spinning/result), so that initial snapshot
+ * can only ever guess idle/complete — this hook asks the command center
+ * for its actual current state the moment it (re)connects, so a refresh
+ * mid-result doesn't sit showing "ready to draw" until something else
+ * happens to change there.
  */
 export const useWheelMirror = () => {
   const [state, setState] = useState<DrawState>(createInitialState);
@@ -80,6 +86,9 @@ export const useWheelMirror = () => {
       .subscribe((subscribeStatus) => {
         if (subscribeStatus === "SUBSCRIBED") {
           setStatus("live");
+          // Ask whoever's running the command center for its current state
+          // right now, instead of waiting for its next unrelated change.
+          void channel.send({ type: "broadcast", event: LIVE_REQUEST_EVENT, payload: {} });
         } else if (
           subscribeStatus === "CHANNEL_ERROR" ||
           subscribeStatus === "TIMED_OUT" ||

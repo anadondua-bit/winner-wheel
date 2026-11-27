@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { CommandHeader } from "@/components/command-center/CommandHeader";
 import { DrawActionCard } from "@/components/command-center/DrawActionCard";
 import { StagePreview } from "@/components/command-center/StagePreview";
@@ -9,6 +10,7 @@ import { useApplyBranding } from "@/hooks/use-apply-branding";
 import { useAwardWheel } from "@/hooks/use-award-wheel";
 import { useDrawSync } from "@/hooks/use-draw-sync";
 import { useWheelBroadcast, type BroadcastStatus } from "@/hooks/use-wheel-broadcast";
+import { sendStageCommand } from "@/lib/wheel-cloud";
 import type { DrawState } from "@/lib/wheel-types";
 
 /**
@@ -48,6 +50,21 @@ const Control = () => {
     resetRemote();
   };
 
+  const handleOpenStage = () => {
+    toast.promise(sendStageCommand("start"), {
+      loading: "Opening the stage display…",
+      success: "Stage display requested",
+      error: "Couldn't reach the stage command — check your connection",
+    });
+  };
+  const handleCloseStage = () => {
+    toast.promise(sendStageCommand("close"), {
+      loading: "Closing the stage display…",
+      success: "Stage display closed",
+      error: "Couldn't reach the stage command — check your connection",
+    });
+  };
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (rosterOpen) return;
@@ -78,6 +95,8 @@ const Control = () => {
           broadcastStatus={broadcastStatus}
           saveStatus={sync.status}
           onOpenRoster={() => setRosterOpen(true)}
+          onOpenStage={handleOpenStage}
+          onCloseStage={handleCloseStage}
         />
 
         <DrawActionCard

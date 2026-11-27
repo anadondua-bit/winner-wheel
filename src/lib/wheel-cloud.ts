@@ -134,6 +134,26 @@ export const createDrawRun = async (draw: {
   return data.id;
 };
 
+export type StageCommand = "start" | "close";
+
+/**
+ * One-row remote control for the physical stage display: a small helper
+ * running on the stage machine polls this row and launches or closes the
+ * kiosk browser window in response. Decoupled from the live broadcast
+ * channel on purpose — that channel is for in-page state, this is for a
+ * machine that isn't running any of this app's JS yet when it needs to
+ * hear "open".
+ */
+export const sendStageCommand = async (command: StageCommand): Promise<void> => {
+  const { error } = await supabase
+    .from("award_wheel_commands")
+    .upsert(
+      { stage_key: STAGE_KEY, command, requested_at: new Date().toISOString() },
+      { onConflict: "stage_key" },
+    );
+  if (error) throw error;
+};
+
 export const appendWinners = async (runId: string, winners: Winner[]): Promise<void> => {
   if (!winners.length) return;
 

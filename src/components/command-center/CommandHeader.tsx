@@ -1,4 +1,15 @@
-import { Settings2 } from "lucide-react";
+import { MonitorOff, MonitorPlay, Settings2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import type { SaveStatus } from "@/lib/wheel-types";
 import type { BroadcastStatus } from "@/hooks/use-wheel-broadcast";
@@ -11,6 +22,9 @@ type CommandHeaderProps = {
   broadcastStatus?: BroadcastStatus;
   saveStatus?: SaveStatus;
   onOpenRoster: () => void;
+  /** Remote-controls the physical stage machine's kiosk browser window — omit both to hide the controls entirely (e.g. the local demo build, which has no stage machine to command). */
+  onOpenStage?: () => void;
+  onCloseStage?: () => void;
 };
 
 const BROADCAST_COPY: Record<BroadcastStatus, { label: string; tone: string }> = {
@@ -34,6 +48,8 @@ export const CommandHeader = ({
   broadcastStatus,
   saveStatus,
   onOpenRoster,
+  onOpenStage,
+  onCloseStage,
 }: CommandHeaderProps) => {
   const broadcast = broadcastStatus ? BROADCAST_COPY[broadcastStatus] : null;
   const save = saveStatus ? SAVE_COPY[saveStatus] : null;
@@ -88,6 +104,53 @@ export const CommandHeader = ({
             Local demo — not synced
           </span>
         )}
+        {onOpenStage ? (
+          <Button
+            variant="stage"
+            size="icon"
+            onClick={onOpenStage}
+            title="Open the stage display's kiosk window"
+            aria-label="Open the stage display"
+            className="h-9 w-9 rounded-full"
+          >
+            <MonitorPlay className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        ) : null}
+        {onCloseStage ? (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="stage"
+                size="icon"
+                title="Close the stage display's kiosk window"
+                aria-label="Close the stage display"
+                className="h-9 w-9 rounded-full"
+              >
+                <MonitorOff className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="border-brand-light/15 bg-card text-foreground">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="font-display">Close the stage display?</AlertDialogTitle>
+                <AlertDialogDescription className="text-brand-light/60">
+                  This blanks the kiosk window on the LED wall right now, in front of the audience.
+                  Only do this to fix something — not between draws.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="rounded-full border-brand-light/20 bg-transparent text-brand-light/80 hover:bg-brand-light/10 hover:text-brand-light">
+                  Keep it open
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={onCloseStage}
+                  className="rounded-full bg-destructive font-semibold text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Close stage display
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        ) : null}
         <Button
           variant="stage"
           size="icon"
