@@ -22,14 +22,13 @@ tunnel, no other machine involved.
 
 ## Start the app
 
-From the repo folder:
+**Easiest:** double-click `start-show.bat` in the repo's root folder. It
+builds the app and runs it with the backend, all in one window.
 
-```powershell
-npm run dev
-```
-
-(or `npm run start` for a production build — either way it serves on
-`http://localhost:8080`.) Leave this running for the whole show.
+Or from a terminal, in the repo folder: `npm run start` (same thing), or
+`npm run dev` for the dev server instead (auto-reloads on changes, handy
+while testing). Either way it serves on `http://localhost:8080`. Leave
+whichever one you used running for the whole show.
 
 Open Control in a normal Chrome window on the operator's own screen:
 
@@ -39,14 +38,14 @@ http://localhost:8080/control
 
 ## One-time setup: pick the projector output
 
-Plug in the HDMI/video output that goes to the LED wall or projector, then
-from `scripts/windows-stage`:
+Plug in the HDMI/video output that goes to the LED wall or projector, then:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\stage-target.ps1
-```
+**Easiest:** double-click `set-stage-target.bat` in `scripts/windows-stage`.
 
-It lists every monitor Windows can see and flashes a big number on each
+Or from a terminal, from that same folder:
+`powershell -ExecutionPolicy Bypass -File .\stage-target.ps1`.
+
+Either way, it lists every monitor Windows can see and flashes a big number on each
 screen for a few seconds, so you can match the list to what's physically in
 front of you. Type the index of the projector/LED-wall screen (not your own
 laptop screen) when prompted. This saves your choice to `stage-target.json`
