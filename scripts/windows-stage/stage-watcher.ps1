@@ -34,14 +34,25 @@
 param(
   [Parameter(Mandatory = $true)][string]$StageUrl,
   [string]$ServerUrl,
-  [string]$ConfigPath = (Join-Path $PSScriptRoot "stage-target.json"),
+  [string]$ConfigPath,
   [string]$ChromePath = "${env:ProgramFiles}\Google\Chrome\Application\chrome.exe",
-  [string]$ProfileDir = (Join-Path $env:LOCALAPPDATA "AwardWheelStageKiosk"),
+  [string]$ProfileDir,
   [int]$PollSeconds = 2
 )
 
 if (-not $ServerUrl) {
   $ServerUrl = $StageUrl -replace '/stage/?$', ''
+}
+
+if (-not $ConfigPath) {
+  $ConfigPath = Join-Path $PSScriptRoot "stage-target.json"
+}
+
+if (-not $ProfileDir) {
+  # $env:LOCALAPPDATA is occasionally empty depending on how the shell was
+  # launched -- fall back rather than hard-failing on it.
+  $profileBase = if ($env:LOCALAPPDATA) { $env:LOCALAPPDATA } elseif ($env:TEMP) { $env:TEMP } else { $PSScriptRoot }
+  $ProfileDir = Join-Path $profileBase "AwardWheelStageKiosk"
 }
 
 if (-not (Test-Path $ChromePath)) {
