@@ -19,25 +19,6 @@ tunnel, no other machine involved.
   just swap `pwsh` for `powershell`.
 - This repo on the machine (`git clone`, or copy the folder over).
 
-## Start the app
-
-**Easiest:** double-click `start-show.bat` in the repo's root folder. It
-builds the app and runs it with the backend, all in one window — the first
-time, it'll also run `npm install` automatically if dependencies aren't
-there yet (so that first run takes a minute or two longer).
-
-Or from a terminal, in the repo folder: `npm install` once, then `npm run
-start` (same thing), or `npm run dev` for the dev server instead
-(auto-reloads on changes, handy while testing). Either way it serves on
-`http://localhost:8080`. Leave whichever one you used running for the whole
-show.
-
-Open Control in a normal Chrome window on the operator's own screen:
-
-```
-http://localhost:8080/control
-```
-
 ## One-time setup: pick the projector output
 
 Plug in the HDMI/video output that goes to the LED wall or projector, then:
@@ -55,19 +36,29 @@ next to the script.
 
 You only need to redo this if the monitor arrangement ever changes.
 
-## Every show: start the watcher
+## Every show: double-click start-show.bat
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\stage-watcher.ps1 -StageUrl "http://localhost:8080/stage"
-```
+That's it — one double-click of `start-show.bat` in the repo's root folder
+does everything:
 
-Leave this running (minimized is fine) for the whole show — it's just
-watching for a command from Control every couple of seconds; nothing opens
-until you tell it to.
+- Installs dependencies first, if this is the very first run.
+- Starts the stage watcher in its own window (skipped with a note if you
+  haven't done the one-time monitor setup above yet).
+- Opens Control in your browser after a few seconds.
+- Builds and runs the app with the backend, in this window.
 
-To stop watching, close the window or `Ctrl+C`. This does **not** close an
-already-open kiosk window — that's done from Control (see below) or by
-closing it directly.
+Leave this window (and the "Stage Watcher" window it opens) running for the
+whole show.
+
+Prefer doing it by hand instead? From a terminal, in the repo folder:
+`npm install` once, then `npm run start` (or `npm run dev` for the dev
+server — auto-reloads on changes, handy while testing), and separately
+`powershell -ExecutionPolicy Bypass -File scripts\windows-stage\stage-watcher.ps1 -StageUrl "http://localhost:8080/stage"`
+in another window.
+
+To stop the watcher, close its window or `Ctrl+C` there. That does **not**
+close an already-open kiosk window — that's done from Control (see below) or
+by closing it directly.
 
 ## From Control: open and close the screen
 

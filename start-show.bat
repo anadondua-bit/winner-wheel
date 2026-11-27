@@ -1,6 +1,7 @@
 @echo off
-rem Double-click this to build the app and run the built version, with the
-rem backend, all in one window. Same as: npm run start
+rem Double-click this to build the app, run it with the backend, and start
+rem watching for the "Open/Close stage display" buttons in Control - the
+rem whole stack, one click.
 
 cd /d "%~dp0"
 
@@ -26,6 +27,18 @@ if not exist "node_modules\.bin\vite.cmd" (
   echo.
 )
 
+if exist "scripts\windows-stage\stage-target.json" (
+  echo Starting the stage watcher in its own window...
+  start "Stage Watcher" powershell -ExecutionPolicy Bypass -File "scripts\windows-stage\stage-watcher.ps1" -StageUrl "http://localhost:8080/stage"
+) else (
+  echo No projector monitor saved yet - skipping the stage watcher.
+  echo Run set-stage-target.bat once, then start this again to pick it up.
+)
+
+echo Opening Control in your browser once the app is up...
+start "" cmd /c "timeout /t 3 /nobreak >nul && start http://localhost:8080/control"
+
+echo.
 call npm run start
 echo.
 pause
